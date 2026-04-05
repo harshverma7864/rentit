@@ -1,0 +1,704 @@
+{
+	"info": {
+		"_postman_id": "rentit-api-collection",
+		"name": "RentIt API",
+		"description": "Complete API collection for the RentIt rental platform backend.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "itemId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "bookingId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "notificationId",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "health"]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"description": "Check if the server is running."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('token', jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\",\n    \"phone\": \"+1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"description": "Register a new user. Automatically saves the returned token."
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('token', jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"description": "Login with email and password. Automatically saves the returned token."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/profile",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "profile"]
+						},
+						"description": "Get the authenticated user's profile."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Updated\",\n    \"phone\": \"+9876543210\",\n    \"avatar\": \"https://example.com/avatar.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/profile",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "profile"]
+						},
+						"description": "Update the authenticated user's profile. All fields are optional."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Location",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"latitude\": 28.6139,\n    \"longitude\": 77.209,\n    \"address\": \"Connaught Place, New Delhi\",\n    \"city\": \"New Delhi\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/location",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "location"]
+						},
+						"description": "Update the authenticated user's location (stored as GeoJSON)."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Items",
+			"item": [
+				{
+					"name": "Get Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/items/categories",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "items", "categories"]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"description": "Get all available item categories."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Items",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/items?page=1&limit=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "items"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "category",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "minPrice",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "maxPrice",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "latitude",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "longitude",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "radius",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "sort",
+									"value": "",
+									"description": "price_asc | price_desc | nearest",
+									"disabled": true
+								}
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"description": "Get all items with optional search, filter, geo-filter, sort, and pagination."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Item by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/items/{{itemId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "items", "{{itemId}}"]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"description": "Get a single item by its ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Items",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/items/mine",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "items", "mine"]
+						},
+						"description": "Get all items owned by the authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Item",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('itemId', jsonData.item._id || jsonData._id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Canon EOS R5 Camera\",\n    \"description\": \"Professional mirrorless camera, perfect for photo shoots and events.\",\n    \"category\": \"electronics\",\n    \"images\": [\"https://example.com/camera1.jpg\"],\n    \"pricePerHour\": 50,\n    \"pricePerDay\": 200,\n    \"pricePerWeek\": 1000,\n    \"securityDeposit\": 500,\n    \"condition\": \"like_new\",\n    \"location\": {\n        \"coordinates\": [77.209, 28.6139],\n        \"address\": \"Connaught Place, New Delhi\",\n        \"city\": \"New Delhi\"\n    },\n    \"tags\": [\"camera\", \"photography\", \"canon\"],\n    \"rules\": \"Handle with care. Return in original bag.\",\n    \"maxRentalDays\": 30,\n    \"deliveryAvailable\": true,\n    \"deliveryFee\": 100\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/items",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "items"]
+						},
+						"description": "Create a new item listing. Automatically saves the returned item ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Item",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Canon EOS R5 Camera (Updated)\",\n    \"pricePerDay\": 250,\n    \"isAvailable\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/items/{{itemId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "items", "{{itemId}}"]
+						},
+						"description": "Update an existing item. Only the owner can update. All fields are optional."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Item",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/items/{{itemId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "items", "{{itemId}}"]
+						},
+						"description": "Delete an item. Only the owner can delete."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Bookings",
+			"item": [
+				{
+					"name": "Create Booking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('bookingId', jsonData.booking._id || jsonData._id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"itemId\": \"{{itemId}}\",\n    \"startDate\": \"2026-04-10T10:00:00.000Z\",\n    \"endDate\": \"2026-04-12T10:00:00.000Z\",\n    \"deliveryOption\": \"pickup\",\n    \"renterNote\": \"I will pick it up at 10 AM.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/bookings",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "bookings"]
+						},
+						"description": "Create a new booking for an item. Cannot book your own item. Automatically saves the booking ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Bookings (as Renter)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/bookings?role=renter",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "bookings"],
+							"query": [
+								{
+									"key": "role",
+									"value": "renter",
+									"description": "renter | owner"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "pending | accepted | rejected | active | completed | cancelled",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get bookings where you are the renter."
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Bookings (as Owner)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/bookings?role=owner",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "bookings"],
+							"query": [
+								{
+									"key": "role",
+									"value": "owner",
+									"description": "renter | owner"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "pending | accepted | rejected | active | completed | cancelled",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get bookings where you are the item owner."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Booking by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/bookings/{{bookingId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "bookings", "{{bookingId}}"]
+						},
+						"description": "Get a single booking by ID. Must be the renter or owner."
+					},
+					"response": []
+				},
+				{
+					"name": "Accept Booking",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"accepted\",\n    \"ownerNote\": \"Approved! See you at 10 AM.\",\n    \"estimatedDeliveryTime\": \"30 minutes\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/bookings/{{bookingId}}/respond",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "bookings", "{{bookingId}}", "respond"]
+						},
+						"description": "Accept a pending booking. Only the item owner can respond."
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Booking",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"rejected\",\n    \"ownerNote\": \"Sorry, the item is not available on those dates.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/bookings/{{bookingId}}/respond",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "bookings", "{{bookingId}}", "respond"]
+						},
+						"description": "Reject a pending booking. Only the item owner can respond."
+					},
+					"response": []
+				},
+				{
+					"name": "Complete Booking",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/bookings/{{bookingId}}/complete",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "bookings", "{{bookingId}}", "complete"]
+						},
+						"description": "Mark a booking as completed. Booking must be accepted or active."
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Booking",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/bookings/{{bookingId}}/cancel",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "bookings", "{{bookingId}}", "cancel"]
+						},
+						"description": "Cancel a booking. Only the renter can cancel. Must be pending or accepted."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Item Bookings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/bookings/item/{{itemId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "bookings", "item", "{{itemId}}"]
+						},
+						"description": "Get all bookings for a specific item. Must be the item owner."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Notifications",
+			"item": [
+				{
+					"name": "Get Notifications",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications"]
+						},
+						"description": "Get the 50 most recent notifications for the authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unread Count",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/unread-count",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "unread-count"]
+						},
+						"description": "Get the count of unread notifications."
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Notification as Read",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "{{notificationId}}", "read"]
+						},
+						"description": "Mark a single notification as read."
+					},
+					"response": []
+				},
+				{
+					"name": "Mark All as Read",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/read-all",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "read-all"]
+						},
+						"description": "Mark all notifications as read."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

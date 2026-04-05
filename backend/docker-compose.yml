@@ -1,0 +1,25 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: rentit-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+  api:
+    build: .
+    container_name: rentit-api
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MONGODB_URI=mongodb://mongo:27017/rentit
+      - JWT_SECRET=rentit_dev_secret_key_2024
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
