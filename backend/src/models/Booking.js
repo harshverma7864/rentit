@@ -35,6 +35,20 @@ const bookingSchema = new mongoose.Schema({
     default: 'unpaid',
   },
   paymentDate: { type: Date },
+  // Negotiation fields
+  proposedPrice: { type: Number },
+  negotiationStatus: {
+    type: String,
+    enum: ['none', 'proposed', 'counter', 'accepted', 'rejected'],
+    default: 'none',
+  },
+  negotiationHistory: [{
+    from: { type: String, enum: ['renter', 'owner'] },
+    amount: { type: Number },
+    message: { type: String, default: '' },
+    timestamp: { type: Date, default: Date.now },
+  }],
+  finalPrice: { type: Number },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Booking', bookingSchema);

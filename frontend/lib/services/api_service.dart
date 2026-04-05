@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Change this to your server URL
-  static const String baseUrl = 'http://10.0.2.2:3000/api'; // Android emulator
+  static const String baseUrl = 'https://rentit-black.vercel.app/api'; // Android emulator
   // static const String baseUrl = 'http://localhost:3000/api'; // iOS simulator / web
 
   String? _token;

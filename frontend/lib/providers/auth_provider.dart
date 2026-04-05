@@ -101,6 +101,24 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> updateProfile({String? name, String? phone, String? avatar}) async {
+    try {
+      final body = <String, dynamic>{};
+      if (name != null) body['name'] = name;
+      if (phone != null) body['phone'] = phone;
+      if (avatar != null) body['avatar'] = avatar;
+
+      final data = await _api.patch('/auth/profile', body: body);
+      _user = UserModel.fromJson(data['user']);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     _socket.disconnect();
     await _api.clearToken();

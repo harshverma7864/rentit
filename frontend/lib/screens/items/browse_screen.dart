@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/item_provider.dart';
 import '../../models/item_model.dart';
@@ -80,6 +81,20 @@ class _BrowseScreenState extends State<BrowseScreen> {
   Future<void> _getUserLocation() async {
     setState(() => _locationLoading = true);
     try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please enable location services')),
+          );
+        }
+        setState(() {
+          _selectedRadius = null;
+          _locationLoading = false;
+        });
+        return;
+      }
+
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -100,6 +115,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 15),
         ),
       );
       setState(() {

@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/glass_widgets.dart';
 import '../../providers/item_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../items/create_item_screen.dart';
 import '../auth/welcome_screen.dart';
+import '../chat/chats_list_screen.dart';
+import '../wallet/wallet_screen.dart';
+import '../notifications/notifications_screen.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -38,7 +44,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       child: SafeArea(
-        child: ListView(
+        child: RefreshIndicator(
+          color: AppTheme.accentCyan,
+          onRefresh: () async {
+            await context.read<ItemProvider>().fetchMyItems();
+          },
+          child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
             const SizedBox(height: 8),
@@ -61,16 +72,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ],
                     ),
-                    child: Center(
-                      child: Text(
-                        (user?.name ?? 'U')[0].toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
+                    child: user?.avatar != null && user!.avatar.isNotEmpty
+                        ? ClipOval(
+                            child: Image.network(
+                              user.avatar,
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Center(
+                                child: Text(
+                                  (user.name)[0].toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              (user?.name ?? 'U')[0].toUpperCase(),
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -147,7 +177,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: Icons.person_outline_rounded,
                   label: 'Edit Profile',
                   color: AppTheme.accentBlue,
-                  onTap: () {},
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const EditProfileScreen(),
+                    ),
+                  ),
+                ),
+                _MenuItem(
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: 'Wallet',
+                  subtitle: 'Add money, view transactions',
+                  color: AppTheme.success,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const WalletScreen(),
+                    ),
+                  ),
+                ),
+                _MenuItem(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  label: 'Messages',
+                  subtitle: 'View all conversations',
+                  color: AppTheme.accentCyan,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ChatsListScreen(),
+                    ),
+                  ),
+                ),
+                _MenuItem(
+                  icon: Icons.notifications_outlined,
+                  label: 'Notifications',
+                  subtitle: 'View all alerts',
+                  color: AppTheme.primaryLight,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen(),
+                    ),
+                  ),
                 ),
                 _MenuItem(
                   icon: Icons.location_on_outlined,
@@ -175,6 +246,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
           ],
+        ),
         ),
       ),
     );
@@ -325,42 +397,121 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showLocationDialog(BuildContext context) {
     final cityCtrl = TextEditingController();
+    bool isDetecting = false;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.primaryDeep,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Update Location',
-            style: TextStyle(color: AppTheme.textPrimary)),
-        content: GlassTextField(
-          controller: cityCtrl,
-          hintText: 'Enter your city',
-          prefixIcon: Icons.location_city_rounded,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child:
-                Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: AppTheme.primaryDeep,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Update Location',
+              style: TextStyle(color: AppTheme.textPrimary)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GlassTextField(
+                controller: cityCtrl,
+                hintText: 'Enter your city',
+                prefixIcon: Icons.location_city_rounded,
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: isDetecting
+                      ? null
+                      : () async {
+                          setDialogState(() => isDetecting = true);
+                          try {
+                            LocationPermission perm =
+                                await Geolocator.checkPermission();
+                            if (perm == LocationPermission.denied) {
+                              perm = await Geolocator.requestPermission();
+                            }
+                            if (perm == LocationPermission.denied ||
+                                perm == LocationPermission.deniedForever) {
+                              setDialogState(() => isDetecting = false);
+                              return;
+                            }
+                            final pos = await Geolocator.getCurrentPosition(
+                              locationSettings: const LocationSettings(
+                                accuracy: LocationAccuracy.medium,
+                              ),
+                            );
+                            final placemarks = await placemarkFromCoordinates(
+                              pos.latitude,
+                              pos.longitude,
+                            );
+                            if (placemarks.isNotEmpty) {
+                              final p = placemarks.first;
+                              final city = p.locality ?? p.subAdministrativeArea ?? '';
+                              final address =
+                                  '${p.street ?? ''}, ${p.locality ?? ''}, ${p.administrativeArea ?? ''}';
+                              cityCtrl.text = city;
+                              if (ctx.mounted) {
+                                Navigator.pop(ctx);
+                                context.read<AuthProvider>().updateLocation(
+                                  pos.latitude,
+                                  pos.longitude,
+                                  address.trim(),
+                                  city,
+                                );
+                              }
+                            }
+                          } catch (_) {}
+                          setDialogState(() => isDetecting = false);
+                        },
+                  icon: isDetecting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.accentCyan,
+                          ),
+                        )
+                      : const Icon(Icons.my_location_rounded,
+                          color: AppTheme.accentCyan),
+                  label: Text(
+                    isDetecting ? 'Detecting...' : 'Use GPS Location',
+                    style: const TextStyle(color: AppTheme.accentCyan),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(
+                        color: AppTheme.accentCyan.withValues(alpha: 0.5)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              if (cityCtrl.text.isNotEmpty) {
-                context
-                    .read<AuthProvider>()
-                    .updateLocation(0, 0, '', cityCtrl.text.trim());
-                Navigator.pop(ctx);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryBlue,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel',
+                  style: TextStyle(color: AppTheme.textSecondary)),
             ),
-            child: const Text('Update'),
-          ),
-        ],
+            ElevatedButton(
+              onPressed: () {
+                if (cityCtrl.text.isNotEmpty) {
+                  context
+                      .read<AuthProvider>()
+                      .updateLocation(0, 0, '', cityCtrl.text.trim());
+                  Navigator.pop(ctx);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Update'),
+            ),
+          ],
+        ),
       ),
     );
   }

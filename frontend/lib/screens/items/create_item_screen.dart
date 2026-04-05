@@ -1,6 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/glass_widgets.dart';
 import '../../providers/item_provider.dart';
@@ -28,6 +33,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   String _condition = 'good';
   bool _deliveryAvailable = false;
   int _maxRentalDays = 30;
+  List<String> _imageBase64List = [];
 
   final List<Map<String, String>> _categories = [
     {'id': 'clothing', 'name': 'Clothing & Fashion', 'icon': '👔'},
@@ -56,6 +62,42 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImages() async {
+    final picker = ImagePicker();
+    final images = await picker.pickMultiImage(
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 70,
+    );
+    for (final img in images) {
+      if (_imageBase64List.length >= 5) break;
+      final bytes = await File(img.path).readAsBytes();
+      setState(() {
+        _imageBase64List.add('data:image/jpeg;base64,${base64Encode(bytes)}');
+      });
+    }
+  }
+
+  Future<void> _detectLocation() async {
+    try {
+      LocationPermission perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) return;
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+      );
+      final placemarks = await placemarkFromCoordinates(pos.latitude, pos.longitude);
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+        setState(() {
+          _cityCtrl.text = p.locality ?? p.subAdministrativeArea ?? '';
+        });
+      }
+    } catch (_) {}
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -63,6 +105,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
       'title': _titleCtrl.text.trim(),
       'description': _descCtrl.text.trim(),
       'category': _category,
+      'images': _imageBase64List,
       'pricePerDay': double.tryParse(_pricePerDayCtrl.text) ?? 0,
       'pricePerHour': double.tryParse(_pricePerHourCtrl.text) ?? 0,
       'pricePerWeek': double.tryParse(_pricePerWeekCtrl.text) ?? 0,
@@ -118,6 +161,91 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              // Image upload section
+              Text(
+                'Photos',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ).animate().fadeIn(delay: 50.ms),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 100,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    ..._imageBase64List.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final imgData = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.memory(
+                                base64Decode(imgData.split(',').last),
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: GestureDetector(
+                                onTap: () => setState(() =>
+                                    _imageBase64List.removeAt(idx)),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: AppTheme.error,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close,
+                                      size: 14, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    if (_imageBase64List.length < 5)
+                      GestureDetector(
+                        onTap: _pickImages,
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceGlass,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppTheme.accentCyan.withValues(alpha: 0.4),
+                              style: BorderStyle.solid,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add_a_photo_rounded,
+                                  color: AppTheme.accentCyan, size: 28),
+                              const SizedBox(height: 4),
+                              Text('Add',
+                                  style: TextStyle(
+                                      color: AppTheme.accentCyan,
+                                      fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ).animate().fadeIn(delay: 75.ms),
+              const SizedBox(height: 16),
+
               // Title
               GlassTextField(
                 controller: _titleCtrl,
@@ -269,7 +397,19 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                 hintText: 'e.g., Mumbai',
                 prefixIcon: Icons.location_city_rounded,
               ).animate().fadeIn(delay: 650.ms),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _detectLocation,
+                  icon: const Icon(Icons.my_location_rounded,
+                      size: 16, color: AppTheme.accentCyan),
+                  label: const Text('Use current location',
+                      style: TextStyle(
+                          color: AppTheme.accentCyan, fontSize: 13)),
+                ),
+              ),
+              const SizedBox(height: 8),
 
               // Delivery
               GlassCard(

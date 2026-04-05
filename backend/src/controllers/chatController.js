@@ -119,3 +119,20 @@ exports.markChatRead = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
+
+exports.getUnreadCount = async (req, res) => {
+  try {
+    const chats = await Chat.find({ participants: req.user._id });
+    let unreadCount = 0;
+    chats.forEach((chat) => {
+      chat.messages.forEach((msg) => {
+        if (msg.sender.toString() !== req.user._id.toString() && !msg.readBy.includes(req.user._id)) {
+          unreadCount++;
+        }
+      });
+    });
+    res.json({ unreadCount });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};

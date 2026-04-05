@@ -47,8 +47,11 @@ exports.payForBooking = async (req, res) => {
     if (booking.paymentStatus === 'paid') return res.status(400).json({ error: 'Already paid' });
     if (booking.status !== 'accepted') return res.status(400).json({ error: 'Booking must be accepted first' });
 
-    const totalAmount = booking.totalPrice + booking.securityDeposit;
     const wallet = await getOrCreateWallet(req.user._id);
+
+    // Use finalPrice if negotiation was accepted, otherwise totalPrice
+    const rentalAmount = booking.finalPrice || booking.totalPrice;
+    const totalAmount = rentalAmount + booking.securityDeposit;
 
     if (wallet.balance < totalAmount) {
       return res.status(400).json({ error: 'Insufficient wallet balance', required: totalAmount, available: wallet.balance });
@@ -58,7 +61,7 @@ exports.payForBooking = async (req, res) => {
     wallet.transactions.push({
       type: 'payment',
       amount: totalAmount,
-      description: `Payment for booking`,
+      description: `Payment for booking (Rental: ₹${rentalAmount}, Deposit: ₹${booking.securityDeposit})`,
       booking: bookingId,
     });
     await wallet.save();
@@ -71,13 +74,13 @@ exports.payForBooking = async (req, res) => {
     }
     await booking.save();
 
-    // Credit owner wallet
+    // Credit ONLY rental amount to owner (security deposit held in escrow)
     const ownerWallet = await getOrCreateWallet(booking.owner);
-    ownerWallet.balance += booking.totalPrice;
+    ownerWallet.balance += rentalAmount;
     ownerWallet.transactions.push({
       type: 'credit',
-      amount: booking.totalPrice,
-      description: `Received payment for rental`,
+      amount: rentalAmount,
+      description: `Received rental payment (Security deposit ₹${booking.securityDeposit} held in escrow)`,
       booking: bookingId,
     });
     await ownerWallet.save();

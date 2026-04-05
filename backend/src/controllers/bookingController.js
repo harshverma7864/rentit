@@ -132,6 +132,21 @@ exports.completeBooking = async (req, res) => {
     booking.status = 'completed';
     await booking.save();
 
+    // Refund security deposit to renter on completion
+    if (booking.paymentStatus === 'paid' && booking.securityDeposit > 0) {
+      const renterWallet = await Wallet.findOne({ user: booking.renter });
+      if (renterWallet) {
+        renterWallet.balance += booking.securityDeposit;
+        renterWallet.transactions.push({
+          type: 'refund',
+          amount: booking.securityDeposit,
+          description: 'Security deposit returned on rental completion',
+          booking: booking._id,
+        });
+        await renterWallet.save();
+      }
+    }
+
     const notifyUser = booking.owner.toString() === req.user._id.toString()
       ? booking.renter : booking.owner;
 
@@ -238,6 +253,11 @@ exports.updateDeliveryStatus = async (req, res) => {
     const booking = await Booking.findOne({ _id: req.params.id, owner: req.user._id });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
+    // Only allow delivery status change after payment is completed
+    if (booking.paymentStatus !== 'paid') {
+      return res.status(400).json({ error: 'Payment must be completed before updating delivery status' });
+    }
+
     booking.deliveryStatus = deliveryStatus;
     await booking.save();
 
@@ -309,6 +329,99 @@ exports.getItemBookings = async (req, res) => {
       .populate('renter', 'name avatar phone');
 
     res.json({ bookings });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.negotiatePrice = async (req, res) => {
+  try {
+    const { proposedPrice, message } = req.body;
+    if (!proposedPrice || proposedPrice <= 0) {
+      return res.status(400).json({ error: 'Valid proposed price is required' });
+    }
+
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      $or: [{ owner: req.user._id }, { renter: req.user._id }],
+    });
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    if (booking.status !== 'pending') {
+      return res.status(400).json({ error: 'Can only negotiate pending bookings' });
+    }
+
+    const isOwner = booking.owner.toString() === req.user._id.toString();
+    const from = isOwner ? 'owner' : 'renter';
+
+    booking.proposedPrice = proposedPrice;
+    booking.negotiationStatus = isOwner ? 'counter' : 'proposed';
+    booking.negotiationHistory.push({
+      from,
+      amount: proposedPrice,
+      message: message || '',
+      timestamp: new Date(),
+    });
+    await booking.save();
+
+    // Notify the other party
+    const notifyUser = isOwner ? booking.renter : booking.owner;
+    const notification = new Notification({
+      user: notifyUser,
+      type: 'general',
+      title: 'Price Negotiation',
+      message: `${isOwner ? 'The owner' : 'The renter'} proposed ₹${proposedPrice} for this booking.`,
+      data: { bookingId: booking._id },
+    });
+    await notification.save();
+
+    await booking.populate([
+      { path: 'item', select: 'title images pricePerDay' },
+      { path: 'renter', select: 'name avatar' },
+      { path: 'owner', select: 'name avatar' },
+    ]);
+
+    res.json({ booking });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.acceptNegotiation = async (req, res) => {
+  try {
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      $or: [{ owner: req.user._id }, { renter: req.user._id }],
+    });
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    if (!booking.proposedPrice) {
+      return res.status(400).json({ error: 'No price proposal to accept' });
+    }
+
+    booking.negotiationStatus = 'accepted';
+    booking.finalPrice = booking.proposedPrice;
+    booking.totalPrice = booking.proposedPrice;
+    await booking.save();
+
+    const isOwner = booking.owner.toString() === req.user._id.toString();
+    const notifyUser = isOwner ? booking.renter : booking.owner;
+    const notification = new Notification({
+      user: notifyUser,
+      type: 'general',
+      title: 'Price Accepted',
+      message: `The negotiated price of ₹${booking.finalPrice} has been accepted!`,
+      data: { bookingId: booking._id },
+    });
+    await notification.save();
+
+    await booking.populate([
+      { path: 'item', select: 'title images pricePerDay' },
+      { path: 'renter', select: 'name avatar' },
+      { path: 'owner', select: 'name avatar' },
+    ]);
+
+    res.json({ booking });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

@@ -7,7 +7,7 @@
 	},
 	"variable": [
 		{
-			"key": "baseUrl",
+			"key": "base_url",
 			"value": "http://localhost:3000",
 			"type": "string"
 		},
@@ -28,6 +28,16 @@
 		},
 		{
 			"key": "notificationId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "chatId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
 			"value": "",
 			"type": "string"
 		}
@@ -52,8 +62,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/health",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}health",
+							"host": ["{{base_url}}"],
 							"path": ["api", "health"]
 						},
 						"auth": {
@@ -97,8 +107,8 @@
 							"raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\",\n    \"phone\": \"+1234567890\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/auth/register",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}auth/register",
+							"host": ["{{base_url}}"],
 							"path": ["api", "auth", "register"]
 						},
 						"auth": {
@@ -137,8 +147,8 @@
 							"raw": "{\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/auth/login",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}auth/login",
+							"host": ["{{base_url}}"],
 							"path": ["api", "auth", "login"]
 						},
 						"auth": {
@@ -154,8 +164,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/auth/profile",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}auth/profile",
+							"host": ["{{base_url}}"],
 							"path": ["api", "auth", "profile"]
 						},
 						"description": "Get the authenticated user's profile."
@@ -177,8 +187,8 @@
 							"raw": "{\n    \"name\": \"John Updated\",\n    \"phone\": \"+9876543210\",\n    \"avatar\": \"https://example.com/avatar.jpg\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/auth/profile",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}auth/profile",
+							"host": ["{{base_url}}"],
 							"path": ["api", "auth", "profile"]
 						},
 						"description": "Update the authenticated user's profile. All fields are optional."
@@ -200,11 +210,25 @@
 							"raw": "{\n    \"latitude\": 28.6139,\n    \"longitude\": 77.209,\n    \"address\": \"Connaught Place, New Delhi\",\n    \"city\": \"New Delhi\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/auth/location",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}auth/location",
+							"host": ["{{base_url}}"],
 							"path": ["api", "auth", "location"]
 						},
 						"description": "Update the authenticated user's location (stored as GeoJSON)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Public Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}auth/user/{{userId}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "user", "{{userId}}"]
+						},
+						"description": "Get a public user profile by user ID. Requires auth."
 					},
 					"response": []
 				}
@@ -219,8 +243,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/items/categories",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}items/categories",
+							"host": ["{{base_url}}"],
 							"path": ["api", "items", "categories"]
 						},
 						"auth": {
@@ -236,8 +260,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/items?page=1&limit=20",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}items?page=1&limit=20",
+							"host": ["{{base_url}}"],
 							"path": ["api", "items"],
 							"query": [
 								{
@@ -304,8 +328,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/items/{{itemId}}",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}items/{{itemId}}",
+							"host": ["{{base_url}}"],
 							"path": ["api", "items", "{{itemId}}"]
 						},
 						"auth": {
@@ -321,8 +345,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/items/mine",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}items/mine",
+							"host": ["{{base_url}}"],
 							"path": ["api", "items", "mine"]
 						},
 						"description": "Get all items owned by the authenticated user."
@@ -358,8 +382,8 @@
 							"raw": "{\n    \"title\": \"Canon EOS R5 Camera\",\n    \"description\": \"Professional mirrorless camera, perfect for photo shoots and events.\",\n    \"category\": \"electronics\",\n    \"images\": [\"https://example.com/camera1.jpg\"],\n    \"pricePerHour\": 50,\n    \"pricePerDay\": 200,\n    \"pricePerWeek\": 1000,\n    \"securityDeposit\": 500,\n    \"condition\": \"like_new\",\n    \"location\": {\n        \"coordinates\": [77.209, 28.6139],\n        \"address\": \"Connaught Place, New Delhi\",\n        \"city\": \"New Delhi\"\n    },\n    \"tags\": [\"camera\", \"photography\", \"canon\"],\n    \"rules\": \"Handle with care. Return in original bag.\",\n    \"maxRentalDays\": 30,\n    \"deliveryAvailable\": true,\n    \"deliveryFee\": 100\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/items",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}items",
+							"host": ["{{base_url}}"],
 							"path": ["api", "items"]
 						},
 						"description": "Create a new item listing. Automatically saves the returned item ID."
@@ -381,8 +405,8 @@
 							"raw": "{\n    \"title\": \"Canon EOS R5 Camera (Updated)\",\n    \"pricePerDay\": 250,\n    \"isAvailable\": true\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/items/{{itemId}}",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}items/{{itemId}}",
+							"host": ["{{base_url}}"],
 							"path": ["api", "items", "{{itemId}}"]
 						},
 						"description": "Update an existing item. Only the owner can update. All fields are optional."
@@ -395,8 +419,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/items/{{itemId}}",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}items/{{itemId}}",
+							"host": ["{{base_url}}"],
 							"path": ["api", "items", "{{itemId}}"]
 						},
 						"description": "Delete an item. Only the owner can delete."
@@ -437,8 +461,8 @@
 							"raw": "{\n    \"itemId\": \"{{itemId}}\",\n    \"startDate\": \"2026-04-10T10:00:00.000Z\",\n    \"endDate\": \"2026-04-12T10:00:00.000Z\",\n    \"deliveryOption\": \"pickup\",\n    \"renterNote\": \"I will pick it up at 10 AM.\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/bookings",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}bookings",
+							"host": ["{{base_url}}"],
 							"path": ["api", "bookings"]
 						},
 						"description": "Create a new booking for an item. Cannot book your own item. Automatically saves the booking ID."
@@ -451,8 +475,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/bookings?role=renter",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}bookings?role=renter",
+							"host": ["{{base_url}}"],
 							"path": ["api", "bookings"],
 							"query": [
 								{
@@ -478,8 +502,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/bookings?role=owner",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}bookings?role=owner",
+							"host": ["{{base_url}}"],
 							"path": ["api", "bookings"],
 							"query": [
 								{
@@ -505,8 +529,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/bookings/{{bookingId}}",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}bookings/{{bookingId}}",
+							"host": ["{{base_url}}"],
 							"path": ["api", "bookings", "{{bookingId}}"]
 						},
 						"description": "Get a single booking by ID. Must be the renter or owner."
@@ -528,8 +552,8 @@
 							"raw": "{\n    \"status\": \"accepted\",\n    \"ownerNote\": \"Approved! See you at 10 AM.\",\n    \"estimatedDeliveryTime\": \"30 minutes\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/bookings/{{bookingId}}/respond",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}bookings/{{bookingId}}/respond",
+							"host": ["{{base_url}}"],
 							"path": ["api", "bookings", "{{bookingId}}", "respond"]
 						},
 						"description": "Accept a pending booking. Only the item owner can respond."
@@ -551,8 +575,8 @@
 							"raw": "{\n    \"status\": \"rejected\",\n    \"ownerNote\": \"Sorry, the item is not available on those dates.\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/bookings/{{bookingId}}/respond",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}bookings/{{bookingId}}/respond",
+							"host": ["{{base_url}}"],
 							"path": ["api", "bookings", "{{bookingId}}", "respond"]
 						},
 						"description": "Reject a pending booking. Only the item owner can respond."
@@ -574,11 +598,11 @@
 							"raw": "{}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/bookings/{{bookingId}}/complete",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}bookings/{{bookingId}}/complete",
+							"host": ["{{base_url}}"],
 							"path": ["api", "bookings", "{{bookingId}}", "complete"]
 						},
-						"description": "Mark a booking as completed. Booking must be accepted or active."
+						"description": "Mark a booking as completed. Booking must be accepted or active. Automatically refunds the security deposit to the renter's wallet."
 					},
 					"response": []
 				},
@@ -597,11 +621,80 @@
 							"raw": "{}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/bookings/{{bookingId}}/cancel",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}bookings/{{bookingId}}/cancel",
+							"host": ["{{base_url}}"],
 							"path": ["api", "bookings", "{{bookingId}}", "cancel"]
 						},
-						"description": "Cancel a booking. Only the renter can cancel. Must be pending or accepted."
+						"description": "Cancel a booking. Only the renter can cancel. If pending/accepted (not out for delivery): full refund. If out for delivery: refund minus delivery fee. Cannot cancel after delivery."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Delivery Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"deliveryStatus\": \"out_for_delivery\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}bookings/{{bookingId}}/delivery-status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "bookings", "{{bookingId}}", "delivery-status"]
+						},
+						"description": "Update delivery status. Only the item owner can update. Payment must be completed first. Values: pending, out_for_delivery, delivered. Notifies the renter."
+					},
+					"response": []
+				},
+				{
+					"name": "Negotiate Price",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"proposedPrice\": 150,\n    \"message\": \"Can you do it for 150?\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}bookings/{{bookingId}}/negotiate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "bookings", "{{bookingId}}", "negotiate"]
+						},
+						"description": "Propose a new price for a pending booking. Either renter or owner can propose. The other party can counter or accept. Notifies the other user."
+					},
+					"response": []
+				},
+				{
+					"name": "Accept Negotiation",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}bookings/{{bookingId}}/accept-negotiation",
+							"host": ["{{base_url}}"],
+							"path": ["api", "bookings", "{{bookingId}}", "accept-negotiation"]
+						},
+						"description": "Accept the latest proposed price. Sets negotiationStatus to accepted, updates totalPrice to the agreed amount. Notifies the other party."
 					},
 					"response": []
 				},
@@ -611,8 +704,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/bookings/item/{{itemId}}",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}bookings/item/{{itemId}}",
+							"host": ["{{base_url}}"],
 							"path": ["api", "bookings", "item", "{{itemId}}"]
 						},
 						"description": "Get all bookings for a specific item. Must be the item owner."
@@ -630,8 +723,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/notifications",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}notifications",
+							"host": ["{{base_url}}"],
 							"path": ["api", "notifications"]
 						},
 						"description": "Get the 50 most recent notifications for the authenticated user."
@@ -644,8 +737,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/notifications/unread-count",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}notifications/unread-count",
+							"host": ["{{base_url}}"],
 							"path": ["api", "notifications", "unread-count"]
 						},
 						"description": "Get the count of unread notifications."
@@ -667,8 +760,8 @@
 							"raw": "{}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}notifications/{{notificationId}}/read",
+							"host": ["{{base_url}}"],
 							"path": ["api", "notifications", "{{notificationId}}", "read"]
 						},
 						"description": "Mark a single notification as read."
@@ -690,11 +783,229 @@
 							"raw": "{}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/notifications/read-all",
-							"host": ["{{baseUrl}}"],
+							"raw": "{{base_url}}notifications/read-all",
+							"host": ["{{base_url}}"],
 							"path": ["api", "notifications", "read-all"]
 						},
 						"description": "Mark all notifications as read."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Chats",
+			"item": [
+				{
+					"name": "Create or Get Chat",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200 || pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('chatId', jsonData.chat._id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{userId}}\",\n    \"itemId\": \"{{itemId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}chats",
+							"host": ["{{base_url}}"],
+							"path": ["api", "chats"]
+						},
+						"description": "Get an existing chat or create a new one between two users. Optionally linked to an item or booking."
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Chats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}chats",
+							"host": ["{{base_url}}"],
+							"path": ["api", "chats"]
+						},
+						"description": "Get all chat conversations for the authenticated user, sorted by most recent."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Chat Messages",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}chats/{{chatId}}/messages",
+							"host": ["{{base_url}}"],
+							"path": ["api", "chats", "{{chatId}}", "messages"]
+						},
+						"description": "Get all messages in a chat. Must be a participant."
+					},
+					"response": []
+				},
+				{
+					"name": "Send Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"text\": \"Hi, I'm interested in renting this item.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}chats/{{chatId}}/messages",
+							"host": ["{{base_url}}"],
+							"path": ["api", "chats", "{{chatId}}", "messages"]
+						},
+						"description": "Send a message in a chat. Must be a participant."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unread Count",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}chats/unread-count",
+							"host": ["{{base_url}}"],
+							"path": ["api", "chats", "unread-count"]
+						},
+						"description": "Get total count of unread messages across all chats for the authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Chat as Read",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}chats/{{chatId}}/read",
+							"host": ["{{base_url}}"],
+							"path": ["api", "chats", "{{chatId}}", "read"]
+						},
+						"description": "Mark all messages in a chat as read by the authenticated user."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Wallet",
+			"item": [
+				{
+					"name": "Get Wallet",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}wallet",
+							"host": ["{{base_url}}"],
+							"path": ["api", "wallet"]
+						},
+						"description": "Get the authenticated user's wallet balance and transaction history. Auto-creates wallet if none exists."
+					},
+					"response": []
+				},
+				{
+					"name": "Add Money",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 1000\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}wallet/add",
+							"host": ["{{base_url}}"],
+							"path": ["api", "wallet", "add"]
+						},
+						"description": "Add money to the wallet. Amount must be positive."
+					},
+					"response": []
+				},
+				{
+					"name": "Pay for Booking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookingId\": \"{{bookingId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}wallet/pay",
+							"host": ["{{base_url}}"],
+							"path": ["api", "wallet", "pay"]
+						},
+						"description": "Pay for an accepted booking from wallet balance. Deducts (finalPrice or totalPrice) + securityDeposit from renter. Credits only the rental amount to the owner. Security deposit is held in escrow and refunded on booking completion. Sets booking to active and paymentStatus to paid."
+					},
+					"response": []
+				},
+				{
+					"name": "Request Refund",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookingId\": \"{{bookingId}}\",\n    \"reason\": \"Item not received\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}wallet/refund",
+							"host": ["{{base_url}}"],
+							"path": ["api", "wallet", "refund"]
+						},
+						"description": "Request a refund of the security deposit for a paid booking. Reason is optional."
 					},
 					"response": []
 				}

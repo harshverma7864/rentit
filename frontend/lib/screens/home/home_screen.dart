@@ -46,8 +46,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       child: SafeArea(
-        child: CustomScrollView(
-          slivers: [
+        child: RefreshIndicator(
+          color: AppTheme.accentCyan,
+          onRefresh: () => context.read<ItemProvider>().fetchItems(refresh: true),
+          child: CustomScrollView(
+            slivers: [
             // Header
             SliverToBoxAdapter(
               child: Padding(
@@ -89,14 +92,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         CircleAvatar(
                           radius: 24,
                           backgroundColor: AppTheme.primaryBlue,
-                          child: Text(
-                            (auth.user?.name ?? 'U')[0].toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
+                          backgroundImage: auth.user?.avatar != null && auth.user!.avatar.isNotEmpty
+                              ? NetworkImage(auth.user!.avatar)
+                              : null,
+                          child: (auth.user?.avatar == null || auth.user!.avatar.isEmpty)
+                              ? Text(
+                                  (auth.user?.name ?? 'U')[0].toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : null,
                         ).animate().fadeIn().scale(begin: const Offset(0.8, 0.8)),
                       ],
                     ),
@@ -290,6 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
+        ),
         ),
       ),
     );

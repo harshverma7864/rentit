@@ -8,6 +8,8 @@ import '../../widgets/glass_widgets.dart';
 import '../../providers/item_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/chat_provider.dart';
+import '../chat/chat_detail_screen.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final String itemId;
@@ -241,53 +243,130 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               const SizedBox(height: 12),
                               GlassCard(
                                 margin: EdgeInsets.zero,
-                                child: Row(
+                                child: Column(
                                   children: [
-                                    CircleAvatar(
-                                      radius: 24,
-                                      backgroundColor: AppTheme.primaryBlue,
-                                      child: Text(
-                                        item.owner!.name[0].toUpperCase(),
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w600,
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 24,
+                                          backgroundColor: AppTheme.primaryBlue,
+                                          backgroundImage: item.owner!.avatar.isNotEmpty
+                                              ? NetworkImage(item.owner!.avatar)
+                                              : null,
+                                          child: item.owner!.avatar.isEmpty
+                                              ? Text(
+                                                  item.owner!.name[0].toUpperCase(),
+                                                  style: const TextStyle(
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                )
+                                              : null,
                                         ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            item.owner!.name,
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppTheme.textPrimary,
-                                            ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                item.owner!.name,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppTheme.textPrimary,
+                                                ),
+                                              ),
+                                              if (item.owner!.rating > 0)
+                                                Row(
+                                                  children: [
+                                                    const Icon(Icons.star_rounded,
+                                                        size: 16,
+                                                        color: AppTheme.warning),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      '${item.owner!.rating.toStringAsFixed(1)} (${item.owner!.totalRatings} reviews)',
+                                                      style: TextStyle(
+                                                        color:
+                                                            AppTheme.textSecondary,
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              if (item.owner!.location?.city != null && item.owner!.location!.city.isNotEmpty)
+                                                Row(
+                                                  children: [
+                                                    Icon(Icons.location_on_outlined,
+                                                        size: 14,
+                                                        color: AppTheme.textHint),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      item.owner!.location!.city,
+                                                      style: TextStyle(
+                                                        color: AppTheme.textHint,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              if (item.owner!.phone.isNotEmpty)
+                                                Row(
+                                                  children: [
+                                                    Icon(Icons.phone_outlined,
+                                                        size: 14,
+                                                        color: AppTheme.textHint),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      item.owner!.phone,
+                                                      style: TextStyle(
+                                                        color: AppTheme.textHint,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                            ],
                                           ),
-                                          if (item.owner!.rating > 0)
-                                            Row(
-                                              children: [
-                                                const Icon(Icons.star_rounded,
-                                                    size: 16,
-                                                    color: AppTheme.warning),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  '${item.owner!.rating.toStringAsFixed(1)}',
-                                                  style: TextStyle(
-                                                    color:
-                                                        AppTheme.textSecondary,
-                                                    fontSize: 13,
+                                        ),
+                                      ],
+                                    ),
+                                    if (!isOwner) ...[
+                                      const SizedBox(height: 12),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: OutlinedButton.icon(
+                                          onPressed: () async {
+                                            final chatProvider = context.read<ChatProvider>();
+                                            final chat = await chatProvider.getOrCreateChat(
+                                              userId: item.owner!.id,
+                                              itemId: item.id,
+                                            );
+                                            if (chat != null && context.mounted) {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) => ChatDetailScreen(
+                                                    chatId: chat.id,
+                                                    otherUserName: item.owner!.name,
                                                   ),
                                                 ),
-                                              ],
-                                            ),
-                                        ],
+                                              );
+                                            }
+                                          },
+                                          icon: const Icon(Icons.chat_bubble_outline_rounded,
+                                              size: 18, color: AppTheme.accentCyan),
+                                          label: const Text('Chat with Owner',
+                                              style: TextStyle(color: AppTheme.accentCyan)),
+                                          style: OutlinedButton.styleFrom(
+                                            side: BorderSide(
+                                                color: AppTheme.accentCyan.withValues(alpha: 0.5)),
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12)),
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ],
                                 ),
                               ).animate().fadeIn(delay: 500.ms),

@@ -137,4 +137,58 @@ class BookingProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> updateDeliveryStatus(String id, String deliveryStatus) async {
+    try {
+      await _api.patch('/bookings/$id/delivery-status', body: {'deliveryStatus': deliveryStatus});
+      await fetchMyListingBookings();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<BookingModel?> fetchBookingById(String id) async {
+    try {
+      final data = await _api.get('/bookings/$id');
+      final booking = BookingModel.fromJson(data['booking']);
+      _selectedBooking = booking;
+      notifyListeners();
+      return booking;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<bool> negotiatePrice(String id, double price, {String? message}) async {
+    try {
+      final body = <String, dynamic>{'proposedPrice': price};
+      if (message != null) body['message'] = message;
+      await _api.patch('/bookings/$id/negotiate', body: body);
+      await fetchMyRentals();
+      await fetchMyListingBookings();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> acceptNegotiation(String id) async {
+    try {
+      await _api.patch('/bookings/$id/accept-negotiation');
+      await fetchMyRentals();
+      await fetchMyListingBookings();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
 }

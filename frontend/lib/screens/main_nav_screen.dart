@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/notification_provider.dart';
+import '../providers/chat_provider.dart';
 import 'home/home_screen.dart';
 import 'bookings/bookings_screen.dart';
 import 'notifications/notifications_screen.dart';
 import 'profile/profile_screen.dart';
 import 'items/create_item_screen.dart';
+import 'chat/chats_list_screen.dart';
 
 class MainNavScreen extends StatefulWidget {
   const MainNavScreen({super.key});
@@ -23,7 +25,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
     HomeScreen(),
     BookingsScreen(),
     SizedBox(), // placeholder for FAB
-    NotificationsScreen(),
+    ChatsListScreen(),
     ProfileScreen(),
   ];
 
@@ -32,6 +34,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<NotificationProvider>().fetchUnreadCount();
+      context.read<ChatProvider>().fetchUnreadCount();
     });
   }
 
@@ -94,12 +97,12 @@ class _MainNavScreenState extends State<MainNavScreen> {
                       onTap: () => setState(() => _currentIndex = 1),
                     ),
                     const SizedBox(width: 56), // Space for FAB
-                    Consumer<NotificationProvider>(
-                      builder: (context, provider, _) => _NavItem(
-                        icon: Icons.notifications_rounded,
-                        label: 'Alerts',
+                    Consumer<ChatProvider>(
+                      builder: (context, chatProvider, _) => _NavItem(
+                        icon: Icons.chat_bubble_rounded,
+                        label: 'Chats',
                         isSelected: _currentIndex == 3,
-                        badge: provider.unreadCount,
+                        badge: chatProvider.unreadCount,
                         onTap: () => setState(() => _currentIndex = 3),
                       ),
                     ),

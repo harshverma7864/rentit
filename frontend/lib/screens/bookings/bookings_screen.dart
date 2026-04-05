@@ -5,7 +5,13 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/glass_widgets.dart';
 import '../../providers/booking_provider.dart';
+import '../../providers/wallet_provider.dart';
+import '../../providers/chat_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/booking_model.dart';
+import '../chat/chat_detail_screen.dart';
+import '../wallet/wallet_screen.dart';
+import 'booking_detail_screen.dart';
 
 class BookingsScreen extends StatefulWidget {
   const BookingsScreen({super.key});
@@ -247,8 +253,17 @@ class _BookingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final fmt = DateFormat('MMM dd');
 
-    return GlassCard(
-      child: Column(
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BookingDetailScreen(bookingId: booking.id),
+          ),
+        );
+      },
+      child: GlassCard(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -380,6 +395,83 @@ class _BookingCard extends StatelessWidget {
             ),
           ],
 
+          // Delivery status
+          if (booking.deliveryOption == 'delivery' &&
+              booking.deliveryStatus != 'none') ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  booking.deliveryStatus == 'delivered'
+                      ? Icons.check_circle_rounded
+                      : booking.deliveryStatus == 'out_for_delivery'
+                          ? Icons.local_shipping_rounded
+                          : Icons.hourglass_top_rounded,
+                  size: 14,
+                  color: booking.deliveryStatus == 'delivered'
+                      ? AppTheme.success
+                      : AppTheme.warning,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  booking.deliveryStatus == 'delivered'
+                      ? 'Delivered'
+                      : booking.deliveryStatus == 'out_for_delivery'
+                          ? 'Out for Delivery'
+                          : 'Delivery Pending',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: booking.deliveryStatus == 'delivered'
+                        ? AppTheme.success
+                        : AppTheme.warning,
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          // Payment status for renter
+          if (!isOwnerView &&
+              booking.status == 'accepted' &&
+              booking.paymentStatus == 'unpaid') ...[
+            const SizedBox(height: 12),
+            _ActionButton(
+              label: 'Pay Now',
+              icon: Icons.payment_rounded,
+              color: AppTheme.success,
+              onTap: () => _payForBooking(context),
+            ),
+          ],
+
+          if (!isOwnerView && booking.paymentStatus == 'paid') ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.check_circle_outlined,
+                    size: 14, color: AppTheme.success),
+                const SizedBox(width: 4),
+                Text('Payment Complete',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.success,
+                        fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ],
+
+          // Chat button
+          if (booking.status != 'rejected' && booking.status != 'cancelled')
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _ActionButton(
+                label: 'Chat',
+                icon: Icons.chat_bubble_outline_rounded,
+                color: AppTheme.accentCyan,
+                onTap: () => _openChat(context),
+              ),
+            ),
+
           // Action buttons
           if (isOwnerView && booking.status == 'pending')
             Padding(
@@ -417,8 +509,50 @@ class _BookingCard extends StatelessWidget {
                 onTap: () => _cancel(context),
               ),
             ),
+
+          // Cancel for accepted (before delivery)
+          if (!isOwnerView &&
+              (booking.status == 'accepted' || booking.status == 'active') &&
+              booking.deliveryStatus != 'delivered')
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _ActionButton(
+                label: booking.deliveryStatus == 'out_for_delivery'
+                    ? 'Cancel (delivery fee applies)'
+                    : 'Cancel Booking',
+                icon: Icons.close_rounded,
+                color: AppTheme.error,
+                onTap: () => _cancel(context),
+              ),
+            ),
+
+          // Owner: delivery status update
+          if (isOwnerView &&
+              booking.deliveryOption == 'delivery' &&
+              (booking.status == 'accepted' || booking.status == 'active') &&
+              booking.paymentStatus == 'paid' &&
+              booking.deliveryStatus != 'delivered')
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _ActionButton(
+                label: booking.deliveryStatus == 'pending'
+                    ? 'Mark Out for Delivery'
+                    : 'Mark Delivered',
+                icon: Icons.local_shipping_rounded,
+                color: AppTheme.primaryLight,
+                onTap: () {
+                  final next = booking.deliveryStatus == 'pending'
+                      ? 'out_for_delivery'
+                      : 'delivered';
+                  context
+                      .read<BookingProvider>()
+                      .updateDeliveryStatus(booking.id, next);
+                },
+              ),
+            ),
         ],
       ),
+    ),
     );
   }
 
@@ -486,6 +620,136 @@ class _BookingCard extends StatelessWidget {
 
   void _cancel(BuildContext context) {
     context.read<BookingProvider>().cancelBooking(booking.id);
+  }
+
+  void _payForBooking(BuildContext context) async {
+    final wallet = context.read<WalletProvider>();
+    await wallet.fetchWallet();
+    final totalAmount = booking.totalPrice + booking.securityDeposit;
+
+    if (!context.mounted) return;
+
+    if (wallet.balance < totalAmount) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Insufficient balance (₹${wallet.balance.toInt()}). Need ₹${totalAmount.toInt()}. Add money to wallet first.'),
+          backgroundColor: AppTheme.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          action: SnackBarAction(
+            label: 'Add Money',
+            textColor: Colors.white,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const WalletScreen()),
+              );
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.primaryDeep,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Confirm Payment',
+            style: TextStyle(color: AppTheme.textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Total: ₹${booking.totalPrice.toInt()}',
+              style: const TextStyle(color: AppTheme.textSecondary),
+            ),
+            Text(
+              'Security Deposit: ₹${booking.securityDeposit.toInt()}',
+              style: const TextStyle(color: AppTheme.textSecondary),
+            ),
+            const Divider(color: AppTheme.textHint),
+            Text(
+              'Amount: ₹${totalAmount.toInt()}',
+              style: const TextStyle(
+                color: AppTheme.accentCyan,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel',
+                style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final success = await wallet.payForBooking(booking.id);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success
+                        ? 'Payment successful!'
+                        : wallet.error ?? 'Payment failed'),
+                    backgroundColor:
+                        success ? AppTheme.success : AppTheme.error,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
+                if (success) {
+                  context.read<BookingProvider>().fetchMyRentals();
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.success,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Pay'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openChat(BuildContext context) async {
+    final currentUserId = context.read<AuthProvider>().user?.id ?? '';
+    final otherUserId = isOwnerView
+        ? booking.renter?.id ?? ''
+        : booking.owner?.id ?? '';
+    final otherUserName = isOwnerView
+        ? booking.renter?.name ?? 'User'
+        : booking.owner?.name ?? 'User';
+
+    if (otherUserId.isEmpty) return;
+
+    final chatProvider = context.read<ChatProvider>();
+    final chat = await chatProvider.getOrCreateChat(
+      userId: otherUserId,
+      itemId: booking.item?.id,
+      bookingId: booking.id,
+    );
+
+    if (chat != null && context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatDetailScreen(
+            chatId: chat.id,
+            otherUserName: otherUserName,
+          ),
+        ),
+      );
+    }
   }
 }
 
