@@ -6,6 +6,7 @@ const bookingSchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   startDate: { type: Date, required: true },
   endDate: { type: Date, required: true },
+  quantity: { type: Number, default: 1, min: 1 },
   totalPrice: { type: Number, required: true },
   securityDeposit: { type: Number, required: true },
   status: {

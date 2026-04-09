@@ -365,6 +365,25 @@ class _BookingCard extends StatelessWidget {
             ),
           ),
 
+          if (booking.quantity > 1) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.inventory_2_outlined,
+                    size: 14, color: AppTheme.accentCyan),
+                const SizedBox(width: 4),
+                Text(
+                  'Qty: ${booking.quantity}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+
           if (booking.renterNote.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(

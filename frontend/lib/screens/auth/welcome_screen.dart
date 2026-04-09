@@ -60,7 +60,7 @@ class WelcomeScreen extends StatelessWidget {
                     .scale(begin: const Offset(0.5, 0.5)),
                 const SizedBox(height: 32),
                 Text(
-                  'RentIt',
+                  'RentPe',
                   style: TextStyle(
                     fontSize: 42,
                     fontWeight: FontWeight.w800,
@@ -70,6 +70,16 @@ class WelcomeScreen extends StatelessWidget {
                       ).createShader(const Rect.fromLTWH(0, 0, 200, 70)),
                   ),
                 ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.3),
+                const SizedBox(height: 8),
+                Text(
+                  'Rent. Flex. Repeat.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.accentCyan,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 1.5,
+                  ),
+                ).animate().fadeIn(delay: 450.ms),
                 const SizedBox(height: 12),
                 Text(
                   'Rent anything, from anyone,\nanywhere near you.',

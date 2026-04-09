@@ -1,6 +1,6 @@
 {
-    "name": "rentit_app",
-    "short_name": "rentit_app",
+    "name": "RentPe",
+    "short_name": "RentPe",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

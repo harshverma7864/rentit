@@ -36,6 +36,7 @@ class BookingModel {
   final DateTime endDate;
   final double totalPrice;
   final double securityDeposit;
+  final int quantity;
   final String status;
   final String deliveryOption;
   final String deliveryStatus;
@@ -61,6 +62,7 @@ class BookingModel {
     required this.endDate,
     required this.totalPrice,
     required this.securityDeposit,
+    this.quantity = 1,
     this.status = 'pending',
     this.deliveryOption = 'pickup',
     this.deliveryStatus = 'none',
@@ -96,6 +98,7 @@ class BookingModel {
           json['endDate'] ?? DateTime.now().toIso8601String()),
       totalPrice: (json['totalPrice'] ?? 0).toDouble(),
       securityDeposit: (json['securityDeposit'] ?? 0).toDouble(),
+      quantity: json['quantity'] ?? 1,
       status: json['status'] ?? 'pending',
       deliveryOption: json['deliveryOption'] ?? 'pickup',
       deliveryStatus: json['deliveryStatus'] ?? 'none',

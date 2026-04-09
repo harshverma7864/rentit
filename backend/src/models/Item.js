@@ -25,6 +25,7 @@ const itemSchema = new mongoose.Schema({
     address: { type: String, default: '' },
     city: { type: String, default: '' },
   },
+  quantity: { type: Number, default: 1, min: 1 },
   isAvailable: { type: Boolean, default: true },
   tags: [{ type: String }],
   rules: { type: String, default: '' },

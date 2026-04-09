@@ -168,6 +168,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 _InfoChip(
                                     icon: Icons.verified_outlined,
                                     label: item.conditionLabel),
+                                _InfoChip(
+                                    icon: Icons.inventory_2_outlined,
+                                    label: '${item.quantity} available'),
                                 if (item.deliveryAvailable)
                                   _InfoChip(
                                       icon: Icons.local_shipping_outlined,
@@ -437,6 +440,7 @@ class _RentBottomSheetState extends State<_RentBottomSheet> {
   DateTime _startDate = DateTime.now().add(const Duration(days: 1));
   DateTime _endDate = DateTime.now().add(const Duration(days: 2));
   String _deliveryOption = 'pickup';
+  int _quantity = 1;
   final _noteController = TextEditingController();
   DateTime? _scheduledPickup;
 
@@ -514,6 +518,7 @@ class _RentBottomSheetState extends State<_RentBottomSheet> {
       startDate: _startDate,
       endDate: _endDate,
       deliveryOption: _deliveryOption,
+      quantity: _quantity,
       renterNote: _noteController.text.isNotEmpty ? _noteController.text : null,
       scheduledPickupTime: _scheduledPickup,
     );
@@ -538,8 +543,8 @@ class _RentBottomSheetState extends State<_RentBottomSheet> {
     final fmt = DateFormat('MMM dd, yyyy');
     final item = context.read<ItemProvider>().selectedItem;
     final days = _endDate.difference(_startDate).inDays.clamp(1, 9999);
-    final total = days * (item?.pricePerDay ?? 0) +
-        (_deliveryOption == 'delivery' ? (item?.deliveryFee ?? 0) : 0);
+    final total = (days * (item?.pricePerDay ?? 0) +
+        (_deliveryOption == 'delivery' ? (item?.deliveryFee ?? 0) : 0)) * _quantity;
 
     return Container(
       decoration: BoxDecoration(
@@ -676,6 +681,67 @@ class _RentBottomSheetState extends State<_RentBottomSheet> {
               const SizedBox(height: 16),
             ],
 
+            // Quantity selector
+            if ((item?.quantity ?? 1) > 1) ...[
+              const Text(
+                'Quantity',
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: GlassDecoration.subtle,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${item?.quantity ?? 1} available',
+                      style: TextStyle(
+                        color: AppTheme.textHint,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: _quantity > 1
+                              ? () => setState(() => _quantity--)
+                              : null,
+                          icon: Icon(Icons.remove_circle_outline,
+                              color: _quantity > 1
+                                  ? AppTheme.accentCyan
+                                  : AppTheme.textHint),
+                          iconSize: 24,
+                        ),
+                        Text(
+                          '$_quantity',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _quantity < (item?.quantity ?? 1)
+                              ? () => setState(() => _quantity++)
+                              : null,
+                          icon: Icon(Icons.add_circle_outline,
+                              color: _quantity < (item?.quantity ?? 1)
+                                  ? AppTheme.accentCyan
+                                  : AppTheme.textHint),
+                          iconSize: 24,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // Note
             GlassTextField(
               controller: _noteController,
@@ -691,15 +757,15 @@ class _RentBottomSheetState extends State<_RentBottomSheet> {
               decoration: GlassDecoration.subtle,
               child: Column(
                 children: [
-                  _PriceRow('$days day${days > 1 ? 's' : ''} × ₹${item?.pricePerDay.toInt() ?? 0}',
-                      '₹${(days * (item?.pricePerDay ?? 0)).toInt()}'),
+                  _PriceRow('$days day${days > 1 ? 's' : ''} × ₹${item?.pricePerDay.toInt() ?? 0}${_quantity > 1 ? ' × $_quantity' : ''}',
+                      '₹${(days * (item?.pricePerDay ?? 0) * _quantity).toInt()}'),
                   if (_deliveryOption == 'delivery')
-                    _PriceRow('Delivery Fee',
-                        '₹${item?.deliveryFee.toInt() ?? 0}'),
+                    _PriceRow('Delivery Fee${_quantity > 1 ? ' × $_quantity' : ''}',
+                        '₹${((item?.deliveryFee.toInt() ?? 0) * _quantity)}'),
                   const Divider(color: AppTheme.textHint),
                   _PriceRow('Total', '₹${total.toInt()}', highlight: true),
-                  _PriceRow('Security Deposit',
-                      '₹${item?.securityDeposit.toInt() ?? 0}'),
+                  _PriceRow('Security Deposit${_quantity > 1 ? ' × $_quantity' : ''}',
+                      '₹${((item?.securityDeposit.toInt() ?? 0) * _quantity)}'),
                 ],
               ),
             ),

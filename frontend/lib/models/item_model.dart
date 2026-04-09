@@ -15,6 +15,7 @@ class ItemModel {
   final String condition;
   final LocationModel? location;
   final bool isAvailable;
+  final int quantity;
   final List<String> tags;
   final String rules;
   final int maxRentalDays;
@@ -37,6 +38,7 @@ class ItemModel {
     this.condition = 'good',
     this.location,
     this.isAvailable = true,
+    this.quantity = 1,
     this.tags = const [],
     this.rules = '',
     this.maxRentalDays = 30,
@@ -67,6 +69,7 @@ class ItemModel {
           ? LocationModel.fromJson(json['location'])
           : null,
       isAvailable: json['isAvailable'] ?? true,
+      quantity: json['quantity'] ?? 1,
       tags: (json['tags'] as List?)?.map<String>((e) => e.toString()).toList() ??
           [],
       rules: json['rules'] ?? '',
@@ -91,6 +94,7 @@ class ItemModel {
       'securityDeposit': securityDeposit,
       'condition': condition,
       'isAvailable': isAvailable,
+      'quantity': quantity,
       'tags': tags,
       'rules': rules,
       'maxRentalDays': maxRentalDays,

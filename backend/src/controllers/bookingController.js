@@ -5,13 +5,18 @@ const Wallet = require('../models/Wallet');
 
 exports.createBooking = async (req, res) => {
   try {
-    const { itemId, startDate, endDate, deliveryOption, renterNote, scheduledPickupTime } = req.body;
+    const { itemId, startDate, endDate, deliveryOption, renterNote, scheduledPickupTime, quantity } = req.body;
 
     const item = await Item.findById(itemId);
     if (!item) return res.status(404).json({ error: 'Item not found' });
     if (!item.isAvailable) return res.status(400).json({ error: 'Item is not available' });
     if (item.owner.toString() === req.user._id.toString()) {
       return res.status(400).json({ error: 'Cannot rent your own item' });
+    }
+
+    const requestedQty = quantity && quantity > 0 ? quantity : 1;
+    if (requestedQty > item.quantity) {
+      return res.status(400).json({ error: `Only ${item.quantity} available` });
     }
 
     // Check for conflicting bookings
@@ -27,7 +32,7 @@ exports.createBooking = async (req, res) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const days = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
-    const totalPrice = days * item.pricePerDay + (deliveryOption === 'delivery' ? item.deliveryFee : 0);
+    const totalPrice = (days * item.pricePerDay + (deliveryOption === 'delivery' ? item.deliveryFee : 0)) * requestedQty;
 
     const booking = new Booking({
       item: itemId,
@@ -35,8 +40,9 @@ exports.createBooking = async (req, res) => {
       owner: item.owner,
       startDate: start,
       endDate: end,
+      quantity: requestedQty,
       totalPrice,
-      securityDeposit: item.securityDeposit,
+      securityDeposit: item.securityDeposit * requestedQty,
       deliveryOption: deliveryOption || 'pickup',
       renterNote: renterNote || '',
       scheduledPickupTime: scheduledPickupTime ? new Date(scheduledPickupTime) : undefined,
@@ -87,6 +93,16 @@ exports.respondToBooking = async (req, res) => {
     if (estimatedDeliveryTime) booking.estimatedDeliveryTime = estimatedDeliveryTime;
     await booking.save();
 
+    // Reduce item quantity when booking is accepted
+    if (status === 'accepted') {
+      const item = await Item.findById(booking.item);
+      if (item) {
+        item.quantity = Math.max(0, item.quantity - (booking.quantity || 1));
+        if (item.quantity === 0) item.isAvailable = false;
+        await item.save();
+      }
+    }
+
     const item = await Item.findById(booking.item);
     const notifType = status === 'accepted' ? 'booking_accepted' : 'booking_rejected';
     const notifMsg = status === 'accepted'
@@ -131,6 +147,14 @@ exports.completeBooking = async (req, res) => {
 
     booking.status = 'completed';
     await booking.save();
+
+    // Restore item quantity on completion (item returned)
+    const completedItem = await Item.findById(booking.item);
+    if (completedItem) {
+      completedItem.quantity += (booking.quantity || 1);
+      if (completedItem.quantity > 0) completedItem.isAvailable = true;
+      await completedItem.save();
+    }
 
     // Refund security deposit to renter on completion
     if (booking.paymentStatus === 'paid' && booking.securityDeposit > 0) {
@@ -178,6 +202,8 @@ exports.cancelBooking = async (req, res) => {
     });
     if (!booking) return res.status(404).json({ error: 'Booking not found or cannot cancel' });
 
+    const originalStatus = booking.status;
+
     // If out for delivery, renter must pay delivery fee only
     if (booking.deliveryStatus === 'out_for_delivery') {
       const item = await Item.findById(booking.item);
@@ -222,6 +248,16 @@ exports.cancelBooking = async (req, res) => {
       }
       booking.status = 'cancelled';
       await booking.save();
+    }
+
+    // Restore item quantity if booking was accepted/active (qty was deducted on accept)
+    if (['accepted', 'active'].includes(originalStatus)) {
+      const cancelledItem = await Item.findById(booking.item);
+      if (cancelledItem) {
+        cancelledItem.quantity += (booking.quantity || 1);
+        if (cancelledItem.quantity > 0) cancelledItem.isAvailable = true;
+        await cancelledItem.save();
+      }
     }
 
     const notification = new Notification({

@@ -33,6 +33,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   String _condition = 'good';
   bool _deliveryAvailable = false;
   int _maxRentalDays = 30;
+  int _quantity = 1;
   List<String> _imageBase64List = [];
 
   final List<Map<String, String>> _categories = [
@@ -115,6 +116,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
       'deliveryAvailable': _deliveryAvailable,
       'deliveryFee': double.tryParse(_deliveryFeeCtrl.text) ?? 0,
       'maxRentalDays': _maxRentalDays,
+      'quantity': _quantity,
       'location': {
         'type': 'Point',
         'coordinates': [0, 0],
@@ -388,6 +390,72 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                       (v) => setState(() => _condition = v)),
                 ],
               ).animate().fadeIn(delay: 600.ms),
+              const SizedBox(height: 24),
+
+              // Quantity
+              Text(
+                'Quantity',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ).animate().fadeIn(delay: 620.ms),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceGlass,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppTheme.accentBlue.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.inventory_2_outlined,
+                            color: AppTheme.accentCyan),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Available Units',
+                          style: TextStyle(color: AppTheme.textPrimary),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: _quantity > 1
+                              ? () => setState(() => _quantity--)
+                              : null,
+                          icon: Icon(Icons.remove_circle_outline,
+                              color: _quantity > 1
+                                  ? AppTheme.accentCyan
+                                  : AppTheme.textHint),
+                          iconSize: 28,
+                        ),
+                        Text(
+                          '$_quantity',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => setState(() => _quantity++),
+                          icon: const Icon(Icons.add_circle_outline,
+                              color: AppTheme.accentCyan),
+                          iconSize: 28,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn(delay: 640.ms),
               const SizedBox(height: 24),
 
               // City

@@ -67,6 +67,7 @@ class BookingProvider extends ChangeNotifier {
     required DateTime startDate,
     required DateTime endDate,
     String deliveryOption = 'pickup',
+    int quantity = 1,
     String? renterNote,
     DateTime? scheduledPickupTime,
   }) async {
@@ -80,6 +81,7 @@ class BookingProvider extends ChangeNotifier {
         'startDate': startDate.toIso8601String(),
         'endDate': endDate.toIso8601String(),
         'deliveryOption': deliveryOption,
+        'quantity': quantity,
       };
       if (renterNote != null) body['renterNote'] = renterNote;
       if (scheduledPickupTime != null) {

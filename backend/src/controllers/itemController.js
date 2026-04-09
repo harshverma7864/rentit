@@ -91,7 +91,7 @@ exports.updateItem = async (req, res) => {
       'pricePerHour', 'pricePerDay', 'pricePerWeek',
       'securityDeposit', 'condition', 'location',
       'isAvailable', 'tags', 'rules', 'maxRentalDays',
-      'deliveryAvailable', 'deliveryFee',
+      'deliveryAvailable', 'deliveryFee', 'quantity',
     ];
     for (const key of allowedUpdates) {
       if (req.body[key] !== undefined) item[key] = req.body[key];

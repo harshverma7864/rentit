@@ -37,7 +37,7 @@ class RentItApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WalletProvider()),
       ],
       child: MaterialApp(
-        title: 'RentIt',
+        title: 'RentPe',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
         home: const SplashScreen(),
@@ -104,11 +104,21 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'RentIt',
+              'RentPe',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Rent. Flex. Repeat.',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: Colors.white70,
+                letterSpacing: 1.2,
               ),
             ),
             const SizedBox(height: 24),
