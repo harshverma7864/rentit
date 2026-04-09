@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -34,7 +33,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   bool _deliveryAvailable = false;
   int _maxRentalDays = 30;
   int _quantity = 1;
-  List<String> _imageBase64List = [];
+  List<String> _imagePaths = [];
 
   final List<Map<String, String>> _categories = [
     {'id': 'clothing', 'name': 'Clothing & Fashion', 'icon': '👔'},
@@ -71,10 +70,9 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
       imageQuality: 70,
     );
     for (final img in images) {
-      if (_imageBase64List.length >= 5) break;
-      final bytes = await File(img.path).readAsBytes();
+      if (_imagePaths.length >= 5) break;
       setState(() {
-        _imageBase64List.add('data:image/jpeg;base64,${base64Encode(bytes)}');
+        _imagePaths.add(img.path);
       });
     }
   }
@@ -106,7 +104,6 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
       'title': _titleCtrl.text.trim(),
       'description': _descCtrl.text.trim(),
       'category': _category,
-      'images': _imageBase64List,
       'pricePerDay': double.tryParse(_pricePerDayCtrl.text) ?? 0,
       'pricePerHour': double.tryParse(_pricePerHourCtrl.text) ?? 0,
       'pricePerWeek': double.tryParse(_pricePerWeekCtrl.text) ?? 0,
@@ -124,7 +121,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
       },
     };
 
-    final success = await context.read<ItemProvider>().createItem(data);
+    final success = await context.read<ItemProvider>().createItem(data, imagePaths: _imagePaths);
     if (success && mounted) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -178,17 +175,17 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
-                    ..._imageBase64List.asMap().entries.map((entry) {
+                    ..._imagePaths.asMap().entries.map((entry) {
                       final idx = entry.key;
-                      final imgData = entry.value;
+                      final imgPath = entry.value;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: Stack(
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: Image.memory(
-                                base64Decode(imgData.split(',').last),
+                              child: Image.file(
+                                File(imgPath),
                                 width: 100,
                                 height: 100,
                                 fit: BoxFit.cover,
@@ -199,7 +196,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                               right: 4,
                               child: GestureDetector(
                                 onTap: () => setState(() =>
-                                    _imageBase64List.removeAt(idx)),
+                                    _imagePaths.removeAt(idx)),
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: const BoxDecoration(
@@ -215,7 +212,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                         ),
                       );
                     }),
-                    if (_imageBase64List.length < 5)
+                    if (_imagePaths.length < 5)
                       GestureDetector(
                         onTap: _pickImages,
                         child: Container(

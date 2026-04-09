@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/item_model.dart';
 import '../services/api_service.dart';
@@ -112,13 +113,23 @@ class ItemProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> createItem(Map<String, dynamic> itemData) async {
+  Future<bool> createItem(Map<String, dynamic> itemData, {List<String> imagePaths = const []}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      await _api.post('/items', body: itemData);
+      final fields = <String, String>{};
+      for (final entry in itemData.entries) {
+        if (entry.key == 'images') continue; // handled as files
+        if (entry.value is Map || entry.value is List) {
+          fields[entry.key] = jsonEncode(entry.value);
+        } else {
+          fields[entry.key] = entry.value.toString();
+        }
+      }
+
+      await _api.multipartPost('/items', fields: fields, filePaths: imagePaths);
       await fetchMyItems();
       _isLoading = false;
       notifyListeners();
@@ -131,9 +142,19 @@ class ItemProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateItem(String id, Map<String, dynamic> itemData) async {
+  Future<bool> updateItem(String id, Map<String, dynamic> itemData, {List<String> newImagePaths = const []}) async {
     try {
-      await _api.patch('/items/$id', body: itemData);
+      final fields = <String, String>{};
+      for (final entry in itemData.entries) {
+        if (entry.key == 'images' && newImagePaths.isNotEmpty) continue;
+        if (entry.value is Map || entry.value is List) {
+          fields[entry.key] = jsonEncode(entry.value);
+        } else {
+          fields[entry.key] = entry.value.toString();
+        }
+      }
+
+      await _api.multipartPatch('/items/$id', fields: fields, filePaths: newImagePaths);
       await fetchMyItems();
       return true;
     } catch (e) {

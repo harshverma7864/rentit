@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
@@ -36,6 +37,13 @@ class ApiService {
     };
   }
 
+  Future<Map<String, String>> _authHeader() async {
+    final t = await token;
+    return {
+      if (t != null) 'Authorization': 'Bearer $t',
+    };
+  }
+
   Future<Map<String, dynamic>> get(String endpoint,
       {Map<String, String>? queryParams}) async {
     final uri =
@@ -51,6 +59,54 @@ class ApiService {
       headers: await _headers(),
       body: jsonEncode(body),
     );
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> multipartPost(
+    String endpoint, {
+    required Map<String, String> fields,
+    List<String> filePaths = const [],
+    String fileField = 'images',
+  }) async {
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl$endpoint'),
+    );
+    request.headers.addAll(await _authHeader());
+    request.fields.addAll(fields);
+    for (final path in filePaths) {
+      request.files.add(await http.MultipartFile.fromPath(
+        fileField,
+        path,
+        contentType: MediaType('image', 'jpeg'),
+      ));
+    }
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> multipartPatch(
+    String endpoint, {
+    required Map<String, String> fields,
+    List<String> filePaths = const [],
+    String fileField = 'images',
+  }) async {
+    final request = http.MultipartRequest(
+      'PATCH',
+      Uri.parse('$baseUrl$endpoint'),
+    );
+    request.headers.addAll(await _authHeader());
+    request.fields.addAll(fields);
+    for (final path in filePaths) {
+      request.files.add(await http.MultipartFile.fromPath(
+        fileField,
+        path,
+        contentType: MediaType('image', 'jpeg'),
+      ));
+    }
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
     return _handleResponse(response);
   }
 

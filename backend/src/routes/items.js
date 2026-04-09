@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const upload = require('../middleware/upload');
 const {
   createItem, getItems, getItemById,
   updateItem, deleteItem, getMyItems, getCategories,
@@ -10,8 +11,8 @@ router.get('/categories', getCategories);
 router.get('/', getItems);
 router.get('/mine', auth, getMyItems);
 router.get('/:id', getItemById);
-router.post('/', auth, createItem);
-router.patch('/:id', auth, updateItem);
+router.post('/', auth, upload.array('images', 5), createItem);
+router.patch('/:id', auth, upload.array('images', 5), updateItem);
 router.delete('/:id', auth, deleteItem);
 
 module.exports = router;
