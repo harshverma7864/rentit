@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { uploadToHosting } = require('../services/imageUpload');
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -53,6 +54,13 @@ exports.updateProfile = async (req, res) => {
         updates[key] = req.body[key];
       }
     }
+
+    // Handle avatar file upload to hosting under images/avatars/{userId}/
+    if (req.file) {
+      const filename = await uploadToHosting(req.file.buffer, req.file.originalname, req.file.mimetype, `avatars/${req.user._id}`);
+      updates.avatar = filename;
+    }
+
     const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
     res.json({ user });
   } catch (error) {

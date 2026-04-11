@@ -96,9 +96,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             ),
                           ),
                           child: Center(
-                            child: item.images.isNotEmpty
+                            child: item.imageUrls.isNotEmpty
                                 ? Image.network(
-                                    item.images.first,
+                                    item.imageUrls.first,
                                     fit: BoxFit.cover,
                                     width: double.infinity,
                                     errorBuilder: (_, __, ___) => Text(
@@ -253,10 +253,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                         CircleAvatar(
                                           radius: 24,
                                           backgroundColor: AppTheme.primaryBlue,
-                                          backgroundImage: item.owner!.avatar.isNotEmpty
-                                              ? NetworkImage(item.owner!.avatar)
+                                          backgroundImage: item.owner!.avatarUrl.isNotEmpty
+                                              ? NetworkImage(item.owner!.avatarUrl)
                                               : null,
-                                          child: item.owner!.avatar.isEmpty
+                                          child: item.owner!.avatarUrl.isEmpty
                                               ? Text(
                                                   item.owner!.name[0].toUpperCase(),
                                                   style: const TextStyle(

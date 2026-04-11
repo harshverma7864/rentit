@@ -8,6 +8,9 @@ class ApiService {
   static const String baseUrl = 'https://rentit-kappa.vercel.app/api'; // Android emulator
   // static const String baseUrl = 'http://localhost:3000/api'; // iOS simulator / web
 
+  // Base URL for images hosted on shared hosting
+  static const String imageBaseUrl = 'https://rentpe.store/uploads/images';
+
   String? _token;
 
   Future<String?> get token async {

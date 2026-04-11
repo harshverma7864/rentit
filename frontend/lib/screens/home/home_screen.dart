@@ -92,10 +92,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         CircleAvatar(
                           radius: 24,
                           backgroundColor: AppTheme.primaryBlue,
-                          backgroundImage: auth.user?.avatar != null && auth.user!.avatar.isNotEmpty
-                              ? NetworkImage(auth.user!.avatar)
+                          backgroundImage: auth.user?.avatarUrl != null && auth.user!.avatarUrl.isNotEmpty
+                              ? NetworkImage(auth.user!.avatarUrl)
                               : null,
-                          child: (auth.user?.avatar == null || auth.user!.avatar.isEmpty)
+                          child: (auth.user?.avatarUrl == null || auth.user!.avatarUrl.isEmpty)
                               ? Text(
                                   (auth.user?.name ?? 'U')[0].toUpperCase(),
                                   style: const TextStyle(
@@ -408,12 +408,12 @@ class _ItemCard extends StatelessWidget {
                 ),
               ),
               child: Center(
-                child: item.images.isNotEmpty
+                child: item.imageUrls.isNotEmpty
                     ? ClipRRect(
                         borderRadius:
                             const BorderRadius.vertical(top: Radius.circular(20)),
                         child: Image.network(
-                          item.images.first,
+                          item.imageUrls.first,
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: 120,

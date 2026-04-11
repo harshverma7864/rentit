@@ -484,12 +484,12 @@ class _BrowseItemCard extends StatelessWidget {
               child: Stack(
                 children: [
                   Center(
-                    child: item.images.isNotEmpty
+                    child: item.imageUrls.isNotEmpty
                         ? ClipRRect(
                             borderRadius: const BorderRadius.vertical(
                                 top: Radius.circular(20)),
                             child: Image.network(
-                              item.images.first,
+                              item.imageUrls.first,
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: 120,

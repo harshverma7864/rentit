@@ -72,10 +72,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ],
                     ),
-                    child: user?.avatar != null && user!.avatar.isNotEmpty
+                    child: user?.avatarUrl != null && user!.avatarUrl.isNotEmpty
                         ? ClipOval(
                             child: Image.network(
-                              user.avatar,
+                              user.avatarUrl,
                               width: 80,
                               height: 80,
                               fit: BoxFit.cover,

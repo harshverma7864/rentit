@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -18,7 +17,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameCtrl;
   late TextEditingController _phoneCtrl;
-  String? _avatarBase64;
+  String? _avatarPath;
   bool _isLoading = false;
 
   @override
@@ -45,9 +44,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       imageQuality: 70,
     );
     if (image != null) {
-      final bytes = await File(image.path).readAsBytes();
       setState(() {
-        _avatarBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+        _avatarPath = image.path;
       });
     }
   }
@@ -61,7 +59,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final success = await auth.updateProfile(
       name: _nameCtrl.text.trim(),
       phone: _phoneCtrl.text.trim(),
-      avatar: _avatarBase64,
+      avatarPath: _avatarPath,
     );
 
     setState(() => _isLoading = false);
@@ -111,14 +109,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       CircleAvatar(
                         radius: 50,
                         backgroundColor: AppTheme.primaryBlue,
-                        backgroundImage: _avatarBase64 != null
-                            ? MemoryImage(
-                                base64Decode(_avatarBase64!.split(',').last))
-                            : (user?.avatar != null && user!.avatar.isNotEmpty
-                                ? NetworkImage(user.avatar)
+                        backgroundImage: _avatarPath != null
+                            ? FileImage(File(_avatarPath!))
+                            : (user?.avatarUrl != null && user!.avatarUrl.isNotEmpty
+                                ? NetworkImage(user.avatarUrl)
                                 : null),
-                        child: (_avatarBase64 == null &&
-                                (user?.avatar == null || user!.avatar.isEmpty))
+                        child: (_avatarPath == null &&
+                                (user?.avatarUrl == null || user!.avatarUrl.isEmpty))
                             ? Text(
                                 (user?.name ?? 'U')[0].toUpperCase(),
                                 style: const TextStyle(

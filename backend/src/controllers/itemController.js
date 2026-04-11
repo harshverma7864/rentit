@@ -1,4 +1,6 @@
+const mongoose = require('mongoose');
 const Item = require('../models/Item');
+const { uploadToHosting } = require('../services/imageUpload');
 
 exports.createItem = async (req, res) => {
   try {
@@ -22,22 +24,25 @@ exports.createItem = async (req, res) => {
       body.isAvailable = body.isAvailable === 'true' || body.isAvailable === true;
     }
 
-    // Convert uploaded files to base64 data URIs
+    // Generate item ID upfront so we can use it as the folder name
+    const itemId = new mongoose.Types.ObjectId();
+
+    // Upload images to hosting under images/items/{itemId}/
     const images = [];
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        const b64 = file.buffer.toString('base64');
-        images.push(`data:${file.mimetype};base64,${b64}`);
+        const filename = await uploadToHosting(file.buffer, file.originalname, file.mimetype, `items/${itemId}`);
+        images.push(filename);
       }
     }
-    // Also accept base64 images sent directly in body (backward compat)
+    // Also accept filenames sent directly in body
     if (body.images) {
       const bodyImages = Array.isArray(body.images) ? body.images : [body.images];
       images.push(...bodyImages);
     }
 
     body.images = images;
-    const item = new Item({ ...body, owner: req.user._id });
+    const item = new Item({ _id: itemId, ...body, owner: req.user._id });
     await item.save();
     await item.populate('owner', 'name avatar rating');
     res.status(201).json({ item });
@@ -138,13 +143,14 @@ exports.updateItem = async (req, res) => {
       body.isAvailable = body.isAvailable === 'true' || body.isAvailable === true;
     }
 
-    // Handle new uploaded images
+    // Upload new images to hosting under images/items/{itemId}/
     if (req.files && req.files.length > 0) {
-      const newImages = req.files.map((file) => {
-        const b64 = file.buffer.toString('base64');
-        return `data:${file.mimetype};base64,${b64}`;
-      });
-      // Keep existing images passed in body, add new uploaded ones
+      const newImages = [];
+      for (const file of req.files) {
+        const filename = await uploadToHosting(file.buffer, file.originalname, file.mimetype, `items/${item._id}`);
+        newImages.push(filename);
+      }
+      // Keep existing image filenames passed in body, add new uploaded ones
       const existingImages = body.images
         ? (Array.isArray(body.images) ? body.images : [body.images])
         : item.images;

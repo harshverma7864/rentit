@@ -1,4 +1,5 @@
 import 'user_model.dart';
+import '../services/api_service.dart';
 
 class ItemModel {
   final String id;
@@ -102,6 +103,10 @@ class ItemModel {
       'deliveryFee': deliveryFee,
     };
   }
+
+  /// Build full image URLs: baseUrl/items/{id}/{filename}
+  List<String> get imageUrls =>
+      images.map((name) => '${ApiService.imageBaseUrl}/items/$id/$name').toList();
 
   String get conditionLabel {
     switch (condition) {

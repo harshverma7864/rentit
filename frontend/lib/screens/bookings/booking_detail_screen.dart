@@ -78,11 +78,11 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Center(
-                  child: booking.item?.images.isNotEmpty == true
+                  child: booking.item?.imageUrls.isNotEmpty == true
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(16),
                           child: Image.network(
-                            booking.item!.images.first,
+                            booking.item!.imageUrls.first,
                             fit: BoxFit.cover, width: 64, height: 64,
                             errorBuilder: (_, __, ___) => Text(
                               booking.item?.categoryIcon ?? '📦',

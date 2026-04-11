@@ -101,15 +101,28 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateProfile({String? name, String? phone, String? avatar}) async {
+  Future<bool> updateProfile({String? name, String? phone, String? avatarPath}) async {
     try {
-      final body = <String, dynamic>{};
-      if (name != null) body['name'] = name;
-      if (phone != null) body['phone'] = phone;
-      if (avatar != null) body['avatar'] = avatar;
+      if (avatarPath != null) {
+        // Use multipart upload when avatar file is provided
+        final fields = <String, String>{};
+        if (name != null) fields['name'] = name;
+        if (phone != null) fields['phone'] = phone;
 
-      final data = await _api.patch('/auth/profile', body: body);
-      _user = UserModel.fromJson(data['user']);
+        final data = await _api.multipartPatch('/auth/profile',
+          fields: fields,
+          filePaths: [avatarPath],
+          fileField: 'avatar',
+        );
+        _user = UserModel.fromJson(data['user']);
+      } else {
+        final body = <String, dynamic>{};
+        if (name != null) body['name'] = name;
+        if (phone != null) body['phone'] = phone;
+
+        final data = await _api.patch('/auth/profile', body: body);
+        _user = UserModel.fromJson(data['user']);
+      }
       notifyListeners();
       return true;
     } catch (e) {

@@ -114,10 +114,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         CircleAvatar(
                           radius: 24,
                           backgroundColor: AppTheme.primaryBlue,
-                          backgroundImage: otherUser.avatar.isNotEmpty
-                              ? NetworkImage(otherUser.avatar)
+                          backgroundImage: otherUser.avatarUrl.isNotEmpty
+                              ? NetworkImage(otherUser.avatarUrl)
                               : null,
-                          child: otherUser.avatar.isEmpty
+                          child: otherUser.avatarUrl.isEmpty
                               ? Text(
                                   otherUser.name.isNotEmpty
                                       ? otherUser.name[0].toUpperCase()

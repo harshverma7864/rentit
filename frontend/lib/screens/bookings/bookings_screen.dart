@@ -277,11 +277,11 @@ class _BookingCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(
-                  child: booking.item?.images.isNotEmpty == true
+                  child: booking.item?.imageUrls.isNotEmpty == true
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(14),
                           child: Image.network(
-                            booking.item!.images.first,
+                            booking.item!.imageUrls.first,
                             fit: BoxFit.cover,
                             width: 56,
                             height: 56,

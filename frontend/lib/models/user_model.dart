@@ -1,3 +1,5 @@
+import '../services/api_service.dart';
+
 class UserModel {
   final String id;
   final String name;
@@ -46,6 +48,10 @@ class UserModel {
       'location': location?.toJson(),
     };
   }
+
+  /// Build full avatar URL: baseUrl/avatars/{id}/{filename}
+  String get avatarUrl =>
+      avatar.isNotEmpty ? '${ApiService.imageBaseUrl}/avatars/$id/$avatar' : '';
 }
 
 class LocationModel {
