@@ -7,7 +7,7 @@ const {
 
 router.get('/', auth, getNotifications);
 router.get('/unread-count', auth, getUnreadCount);
-router.patch('/:id/read', auth, markAsRead);
 router.patch('/read-all', auth, markAllRead);
+router.patch('/:id/read', auth, markAsRead);
 
 module.exports = router;

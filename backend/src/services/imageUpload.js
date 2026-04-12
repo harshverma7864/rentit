@@ -3,7 +3,7 @@ const https = require('https');
 const http = require('http');
 
 const UPLOAD_URL = process.env.IMAGE_UPLOAD_URL || 'https://rentpe.store/uploads/upload.php';
-const UPLOAD_SECRET = process.env.IMAGE_UPLOAD_SECRET || '';
+const UPLOAD_SECRET = process.env.IMAGE_UPLOAD_SECRET || 'CHANGE_THIS_TO_A_STRONG_SECRET';
 
 /**
  * Upload an image to the hosting server.
@@ -42,16 +42,21 @@ function uploadToHosting(buffer, filename, mimeType, folder) {
             if (res.statusCode >= 200 && res.statusCode < 300 && json.filename) {
               resolve(json.filename);
             } else {
-              reject(new Error(json.error || 'Image upload failed'));
+              console.error('[ImageUpload] Upload failed:', { status: res.statusCode, url: UPLOAD_URL, folder, response: data });
+              reject(new Error(json.error || `Image upload failed (HTTP ${res.statusCode})`));
             }
           } catch {
+            console.error('[ImageUpload] Invalid response:', { status: res.statusCode, url: UPLOAD_URL, folder, body: data });
             reject(new Error('Invalid response from image server'));
           }
         });
       },
     );
 
-    req.on('error', reject);
+    req.on('error', (err) => {
+      console.error('[ImageUpload] Request error:', { url: UPLOAD_URL, folder, error: err.message });
+      reject(err);
+    });
     form.pipe(req);
   });
 }

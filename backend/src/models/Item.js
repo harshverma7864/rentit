@@ -23,7 +23,13 @@ const itemSchema = new mongoose.Schema({
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: { type: [Number], default: [0, 0] },
     address: { type: String, default: '' },
+    addressLine1: { type: String, default: '' },
+    addressLine2: { type: String, default: '' },
+    street: { type: String, default: '' },
     city: { type: String, default: '' },
+    state: { type: String, default: '' },
+    pincode: { type: String, default: '' },
+    landmark: { type: String, default: '' },
   },
   quantity: { type: Number, default: 1, min: 1 },
   isAvailable: { type: Boolean, default: true },
@@ -32,6 +38,13 @@ const itemSchema = new mongoose.Schema({
   maxRentalDays: { type: Number, default: 30 },
   deliveryAvailable: { type: Boolean, default: false },
   deliveryFee: { type: Number, default: 0 },
+  deliveryOptions: [{
+    type: String,
+    enum: ['self_pickup', 'seller_delivery', 'in_app_delivery'],
+  }],
+  isBoosted: { type: Boolean, default: false },
+  boostExpiresAt: { type: Date },
+  boostPriority: { type: Number, default: 0 },
 }, { timestamps: true });
 
 itemSchema.index({ location: '2dsphere' });

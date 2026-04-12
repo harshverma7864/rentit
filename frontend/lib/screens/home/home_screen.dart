@@ -23,7 +23,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ItemProvider>().fetchItems(refresh: true);
+      final itemProvider = context.read<ItemProvider>();
+      itemProvider.fetchItems(refresh: true);
+      itemProvider.fetchRecommended();
     });
   }
 
@@ -194,6 +196,104 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+            // Recommended section
+            Consumer<ItemProvider>(
+              builder: (context, provider, _) {
+                if (provider.recommendedItems.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+                return SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: const Text(
+                          'Recommended For You',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 200,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: provider.recommendedItems.length,
+                          itemBuilder: (context, index) {
+                            final item = provider.recommendedItems[index];
+                            return GestureDetector(
+                              onTap: () => Navigator.push(context,
+                                MaterialPageRoute(builder: (_) => ItemDetailScreen(itemId: item.id))),
+                              child: Container(
+                                width: 160,
+                                margin: const EdgeInsets.only(right: 12),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.surfaceGlass,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: item.isBoosted
+                                      ? Border.all(color: Colors.amber.withValues(alpha: 0.5), width: 1.5)
+                                      : Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.2)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Stack(
+                                        children: [
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.primaryBlue.withValues(alpha: 0.2),
+                                              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                                            ),
+                                            child: Center(
+                                              child: item.imageUrls.isNotEmpty
+                                                  ? ClipRRect(
+                                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                                                      child: Image.network(item.imageUrls.first, fit: BoxFit.cover, width: double.infinity),
+                                                    )
+                                                  : Text(item.categoryIcon, style: const TextStyle(fontSize: 36)),
+                                            ),
+                                          ),
+                                          if (item.isBoosted)
+                                            Positioned(
+                                              top: 6, left: 6,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.amber,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: const Text('Promoted', style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.bold)),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textPrimary, fontSize: 13)),
+                                          Text('₹${item.pricePerDay.toInt()}/day',
+                                              style: TextStyle(color: AppTheme.accentCyan, fontSize: 12)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                );
+              },
+            ),
 
             // Trending items header
             SliverToBoxAdapter(
@@ -395,7 +495,9 @@ class _ItemCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Image placeholder
-            Container(
+            Stack(
+              children: [
+                Container(
               height: 120,
               decoration: BoxDecoration(
                 borderRadius:
@@ -428,6 +530,35 @@ class _ItemCard extends StatelessWidget {
                         style: const TextStyle(fontSize: 40),
                       ),
               ),
+                ),
+                if (item.isBoosted)
+                  Positioned(
+                    top: 8, left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.amber,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text('Promoted', style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                if (!item.hasInAppDelivery)
+                  Positioned(
+                    top: 8, right: 8,
+                    child: Tooltip(
+                      message: 'No in-app delivery protection',
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 14),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             Padding(
               padding: const EdgeInsets.all(12),

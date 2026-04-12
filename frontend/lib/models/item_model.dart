@@ -22,6 +22,9 @@ class ItemModel {
   final int maxRentalDays;
   final bool deliveryAvailable;
   final double deliveryFee;
+  final List<String> deliveryOptions;
+  final bool isBoosted;
+  final DateTime? boostExpiresAt;
   final DateTime? createdAt;
 
   ItemModel({
@@ -45,6 +48,9 @@ class ItemModel {
     this.maxRentalDays = 30,
     this.deliveryAvailable = false,
     this.deliveryFee = 0,
+    this.deliveryOptions = const [],
+    this.isBoosted = false,
+    this.boostExpiresAt,
     this.createdAt,
   });
 
@@ -77,6 +83,14 @@ class ItemModel {
       maxRentalDays: json['maxRentalDays'] ?? 30,
       deliveryAvailable: json['deliveryAvailable'] ?? false,
       deliveryFee: (json['deliveryFee'] ?? 0).toDouble(),
+      deliveryOptions: (json['deliveryOptions'] as List?)
+              ?.map<String>((e) => e.toString())
+              .toList() ??
+          [],
+      isBoosted: json['isBoosted'] ?? false,
+      boostExpiresAt: json['boostExpiresAt'] != null
+          ? DateTime.tryParse(json['boostExpiresAt'])
+          : null,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'])
           : null,
@@ -101,12 +115,17 @@ class ItemModel {
       'maxRentalDays': maxRentalDays,
       'deliveryAvailable': deliveryAvailable,
       'deliveryFee': deliveryFee,
+      'deliveryOptions': deliveryOptions,
     };
   }
 
   /// Build full image URLs: baseUrl/items/{id}/{filename}
   List<String> get imageUrls =>
       images.map((name) => '${ApiService.imageBaseUrl}/items/$id/$name').toList();
+
+  bool get hasInAppDelivery => deliveryOptions.contains('in_app_delivery');
+  bool get hasSellerDelivery => deliveryOptions.contains('seller_delivery');
+  bool get hasSelfPickup => deliveryOptions.contains('self_pickup') || deliveryOptions.isEmpty;
 
   String get conditionLabel {
     switch (condition) {

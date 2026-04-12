@@ -148,4 +148,54 @@ class AuthProvider extends ChangeNotifier {
   }
 
   SocketService get socketService => _socket;
+
+  // ---- Address Management ----
+
+  Future<bool> addAddress(Map<String, dynamic> addressData) async {
+    try {
+      final data = await _api.post('/auth/address', body: addressData);
+      await fetchProfile();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateAddress(String addressId, Map<String, dynamic> addressData) async {
+    try {
+      await _api.patch('/auth/address/$addressId', body: addressData);
+      await fetchProfile();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteAddress(String addressId) async {
+    try {
+      await _api.delete('/auth/address/$addressId');
+      await fetchProfile();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> setDefaultAddress(String addressId) async {
+    try {
+      await _api.patch('/auth/address/$addressId/default', body: {});
+      await fetchProfile();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
 }

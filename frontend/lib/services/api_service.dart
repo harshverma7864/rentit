@@ -5,8 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Change this to your server URL
-  static const String baseUrl = 'https://rentit-kappa.vercel.app/api'; // Android emulator
-  // static const String baseUrl = 'http://localhost:3000/api'; // iOS simulator / web
+  static const String baseUrl = 'https://rentit-kappa.vercel.app/api';
+  // static const String baseUrl = 'http://localhost:3000/api'; // local dev
 
   // Base URL for images hosted on shared hosting
   static const String imageBaseUrl = 'https://rentpe.store/uploads/images';

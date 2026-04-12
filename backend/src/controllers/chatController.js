@@ -1,5 +1,16 @@
 const Chat = require('../models/Chat');
 
+// Regex patterns to block contact info and addresses in chat
+const BLOCKED_PATTERNS = [
+  /(\+?\d[\d\s\-]{7,14}\d)/,                                      // Phone numbers
+  /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/,            // Email addresses
+  /\b\d+\s*(,\s*)?(street|st|road|rd|avenue|ave|lane|ln|drive|dr|flat|house|floor|block|sector|colony|nagar|plot|gali|mohalla|chowk|marg|path|way)\b/i, // Address patterns
+];
+
+function containsBlockedContent(text) {
+  return BLOCKED_PATTERNS.some(pattern => pattern.test(text));
+}
+
 exports.getOrCreateChat = async (req, res) => {
   try {
     const { userId, itemId, bookingId } = req.body;
@@ -63,6 +74,11 @@ exports.sendMessage = async (req, res) => {
   try {
     const { text } = req.body;
     if (!text || !text.trim()) return res.status(400).json({ error: 'Message text is required' });
+
+    // Block contact details and addresses
+    if (containsBlockedContent(text.trim())) {
+      return res.status(400).json({ error: 'Cannot share contact details or addresses in chat. This is to protect both parties.' });
+    }
 
     const chat = await Chat.findOne({
       _id: req.params.id,

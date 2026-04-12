@@ -8,6 +8,8 @@ import 'providers/booking_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/wallet_provider.dart';
+import 'providers/review_provider.dart';
+import 'providers/subscription_provider.dart';
 import 'screens/auth/welcome_screen.dart';
 import 'screens/main_nav_screen.dart';
 
@@ -35,6 +37,8 @@ class RentItApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
         ChangeNotifierProvider(create: (_) => WalletProvider()),
+        ChangeNotifierProvider(create: (_) => ReviewProvider()),
+        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
       ],
       child: MaterialApp(
         title: 'RentPe',

@@ -9,6 +9,8 @@ const bookingRoutes = require('./routes/bookings');
 const notificationRoutes = require('./routes/notifications');
 const chatRoutes = require('./routes/chats');
 const walletRoutes = require('./routes/wallet');
+const reviewRoutes = require('./routes/reviews');
+const subscriptionRoutes = require('./routes/subscription');
 
 const app = express();
 
@@ -51,6 +53,8 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/subscription', subscriptionRoutes);
 
 // Local development server
 if (process.env.NODE_ENV !== 'production') {

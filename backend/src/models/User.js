@@ -13,9 +13,25 @@ const userSchema = new mongoose.Schema({
     address: { type: String, default: '' },
     city: { type: String, default: '' },
   },
+  addresses: [{
+    label: { type: String, default: 'Home' },
+    addressLine1: { type: String, required: true },
+    addressLine2: { type: String, default: '' },
+    street: { type: String, default: '' },
+    city: { type: String, required: true },
+    state: { type: String, default: '' },
+    pincode: { type: String, default: '' },
+    landmark: { type: String, default: '' },
+    location: {
+      type: { type: String, enum: ['Point'], default: 'Point' },
+      coordinates: { type: [Number], default: [0, 0] },
+    },
+    isDefault: { type: Boolean, default: false },
+  }],
   rating: { type: Number, default: 0 },
   totalRatings: { type: Number, default: 0 },
   isVerified: { type: Boolean, default: false },
+  subscription: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription' },
 }, { timestamps: true });
 
 userSchema.index({ 'location': '2dsphere' });

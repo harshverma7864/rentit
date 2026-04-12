@@ -176,4 +176,38 @@ class ItemProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  // ---- Boost ----
+
+  List<ItemModel> _recommendedItems = [];
+  List<ItemModel> get recommendedItems => _recommendedItems;
+
+  Future<bool> boostItem(String itemId, String tier) async {
+    try {
+      final data = await _api.post('/items/$itemId/boost', body: {'tier': tier});
+      await fetchMyItems();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> fetchRecommended({double? latitude, double? longitude}) async {
+    try {
+      final params = <String, String>{};
+      if (latitude != null) params['latitude'] = latitude.toString();
+      if (longitude != null) params['longitude'] = longitude.toString();
+
+      final data = await _api.get('/items/recommended', queryParams: params);
+      _recommendedItems = (data['items'] as List)
+          .map<ItemModel>((e) => ItemModel.fromJson(e))
+          .toList();
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
 }

@@ -61,9 +61,32 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
   }
 
+  // Regex patterns to block contact info and addresses
+  static final List<RegExp> _blockedPatterns = [
+    RegExp(r'(\+?\d[\d\s\-]{7,14}\d)'),                                    // Phone numbers
+    RegExp(r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}'),          // Email
+    RegExp(r'\b\d+\s*(,\s*)?(street|st|road|rd|avenue|ave|lane|ln|drive|dr|flat|house|floor|block|sector|colony|nagar|plot|gali|mohalla|chowk|marg|path|way)\b', caseSensitive: false),
+  ];
+
+  bool _containsBlockedContent(String text) {
+    return _blockedPatterns.any((p) => p.hasMatch(text));
+  }
+
   Future<void> _sendMessage() async {
     final text = _msgController.text.trim();
     if (text.isEmpty) return;
+
+    if (_containsBlockedContent(text)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sharing contact info or addresses is not allowed in chat'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
 
     _msgController.clear();
     final success = await context.read<ChatProvider>().sendMessage(widget.chatId, text);

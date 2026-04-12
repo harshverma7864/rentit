@@ -10,6 +10,7 @@ import '../../providers/booking_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../chat/chat_detail_screen.dart';
+import '../profile/seller_profile_screen.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final String itemId;
@@ -188,6 +189,47 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               ],
                             ).animate().fadeIn(delay: 200.ms),
 
+                            // Damage warning if no in-app delivery
+                            if (!item.hasInAppDelivery) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'No in-app delivery. Damages will be managed by seller/buyer. Opt for in-app delivery for protection.',
+                                        style: TextStyle(color: Colors.orange[300], fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ).animate().fadeIn(delay: 250.ms),
+                            ],
+
+                            // Delivery options display
+                            if (item.deliveryOptions.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 8,
+                                children: [
+                                  if (item.hasSelfPickup)
+                                    _InfoChip(icon: Icons.directions_walk, label: 'Self Pickup'),
+                                  if (item.hasSellerDelivery)
+                                    _InfoChip(icon: Icons.local_shipping, label: 'Seller Delivery'),
+                                  if (item.hasInAppDelivery)
+                                    _InfoChip(icon: Icons.verified_user, label: 'In-App Delivery'),
+                                ],
+                              ),
+                            ],
+
                             const SizedBox(height: 24),
 
                             // Pricing section
@@ -244,7 +286,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             if (item.owner != null) ...[
                               _SectionTitle(text: 'Listed By'),
                               const SizedBox(height: 12),
-                              GlassCard(
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(context,
+                                    MaterialPageRoute(builder: (_) => SellerProfileScreen(userId: item.owner!.id)));
+                                },
+                                child: GlassCard(
                                 margin: EdgeInsets.zero,
                                 child: Column(
                                   children: [
@@ -272,13 +319,19 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                item.owner!.name,
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: AppTheme.textPrimary,
-                                                ),
+                                              Row(
+                                                children: [
+                                                  Text(
+                                                    item.owner!.name,
+                                                    style: const TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: AppTheme.textPrimary,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Icon(Icons.arrow_forward_ios, size: 12, color: AppTheme.textHint),
+                                                ],
                                               ),
                                               if (item.owner!.rating > 0)
                                                 Row(
@@ -328,6 +381,22 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                                       ),
                                                     ),
                                                   ],
+                                                )
+                                              else if (item.owner!.contactLocked)
+                                                Row(
+                                                  children: [
+                                                    Icon(Icons.lock_outline,
+                                                        size: 14,
+                                                        color: Colors.orange),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      'Upgrade to view contact',
+                                                      style: TextStyle(
+                                                        color: Colors.orange,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                             ],
                                           ),
@@ -372,6 +441,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                     ],
                                   ],
                                 ),
+                              ),
                               ).animate().fadeIn(delay: 500.ms),
                             ],
 

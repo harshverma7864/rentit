@@ -8,6 +8,8 @@ import 'package:geocoding/geocoding.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/glass_widgets.dart';
 import '../../providers/item_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../models/user_model.dart';
 
 class CreateItemScreen extends StatefulWidget {
   const CreateItemScreen({super.key});
@@ -34,6 +36,15 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   int _maxRentalDays = 30;
   int _quantity = 1;
   List<String> _imagePaths = [];
+
+  // Delivery options
+  bool _selfPickup = true;
+  bool _sellerDelivery = false;
+  bool _inAppDelivery = false;
+
+  // Address
+  AddressModel? _selectedAddress;
+  double? _lat, _lng;
 
   final List<Map<String, String>> _categories = [
     {'id': 'clothing', 'name': 'Clothing & Fashion', 'icon': '👔'},
@@ -100,6 +111,11 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final deliveryOpts = <String>[];
+    if (_selfPickup) deliveryOpts.add('self_pickup');
+    if (_sellerDelivery) deliveryOpts.add('seller_delivery');
+    if (_inAppDelivery) deliveryOpts.add('in_app_delivery');
+
     final data = {
       'title': _titleCtrl.text.trim(),
       'description': _descCtrl.text.trim(),
@@ -110,14 +126,22 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
       'securityDeposit': double.tryParse(_depositCtrl.text) ?? 0,
       'condition': _condition,
       'rules': _rulesCtrl.text.trim(),
-      'deliveryAvailable': _deliveryAvailable,
+      'deliveryAvailable': _sellerDelivery || _inAppDelivery,
       'deliveryFee': double.tryParse(_deliveryFeeCtrl.text) ?? 0,
+      'deliveryOptions': deliveryOpts,
       'maxRentalDays': _maxRentalDays,
       'quantity': _quantity,
       'location': {
         'type': 'Point',
-        'coordinates': [0, 0],
+        'coordinates': [_lng ?? _selectedAddress?.location?.longitude ?? 0, _lat ?? _selectedAddress?.location?.latitude ?? 0],
         'city': _cityCtrl.text.trim(),
+        'address': _selectedAddress?.addressLine1 ?? '',
+        'addressLine1': _selectedAddress?.addressLine1 ?? '',
+        'addressLine2': _selectedAddress?.addressLine2 ?? '',
+        'street': _selectedAddress?.street ?? '',
+        'state': _selectedAddress?.state ?? '',
+        'pincode': _selectedAddress?.pincode ?? '',
+        'landmark': _selectedAddress?.landmark ?? '',
       },
     };
 
@@ -455,13 +479,74 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
               ).animate().fadeIn(delay: 640.ms),
               const SizedBox(height: 24),
 
-              // City
+              // Location / Address
+              Text(
+                'Location',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ).animate().fadeIn(delay: 650.ms),
+              const SizedBox(height: 12),
+
+              // Address picker from saved addresses
+              Consumer<AuthProvider>(
+                builder: (context, auth, _) {
+                  final addresses = auth.user?.addresses ?? [];
+                  if (addresses.isNotEmpty) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceGlass,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.2)),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedAddress?.id,
+                              isExpanded: true,
+                              dropdownColor: AppTheme.cardBg,
+                              hint: Text('Select saved address', style: TextStyle(color: AppTheme.textHint)),
+                              items: [
+                                const DropdownMenuItem(value: null, child: Text('Enter manually')),
+                                ...addresses.map((a) => DropdownMenuItem(
+                                  value: a.id,
+                                  child: Text('${a.label}: ${a.addressLine1}, ${a.city}', overflow: TextOverflow.ellipsis),
+                                )),
+                              ],
+                              onChanged: (v) {
+                                setState(() {
+                                  if (v == null) {
+                                    _selectedAddress = null;
+                                  } else {
+                                    _selectedAddress = addresses.firstWhere((a) => a.id == v);
+                                    _cityCtrl.text = _selectedAddress!.city;
+                                    _lat = _selectedAddress!.location?.latitude;
+                                    _lng = _selectedAddress!.location?.longitude;
+                                  }
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+
               GlassTextField(
                 controller: _cityCtrl,
                 labelText: 'City',
                 hintText: 'e.g., Mumbai',
                 prefixIcon: Icons.location_city_rounded,
-              ).animate().fadeIn(delay: 650.ms),
+              ),
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,
@@ -474,35 +559,52 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                           color: AppTheme.accentCyan, fontSize: 13)),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
 
-              // Delivery
+              // Delivery Options
+              Text(
+                'Delivery Options',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ).animate().fadeIn(delay: 700.ms),
+              const SizedBox(height: 12),
+
               GlassCard(
                 margin: EdgeInsets.zero,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.local_shipping_outlined,
-                            color: AppTheme.accentCyan),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Delivery Available',
-                          style: TextStyle(color: AppTheme.textPrimary),
-                        ),
-                      ],
+                    CheckboxListTile(
+                      value: _selfPickup,
+                      onChanged: (v) => setState(() => _selfPickup = v ?? true),
+                      title: const Text('Self Pickup', style: TextStyle(color: AppTheme.textPrimary)),
+                      subtitle: Text('Buyer picks up the item', style: TextStyle(color: AppTheme.textHint, fontSize: 12)),
+                      secondary: const Icon(Icons.directions_walk, color: AppTheme.accentCyan),
+                      activeColor: AppTheme.accentCyan,
                     ),
-                    Switch(
-                      value: _deliveryAvailable,
-                      onChanged: (v) => setState(() => _deliveryAvailable = v),
+                    CheckboxListTile(
+                      value: _sellerDelivery,
+                      onChanged: (v) => setState(() => _sellerDelivery = v ?? false),
+                      title: const Text('Seller Delivery', style: TextStyle(color: AppTheme.textPrimary)),
+                      subtitle: Text('You deliver to the buyer', style: TextStyle(color: AppTheme.textHint, fontSize: 12)),
+                      secondary: const Icon(Icons.local_shipping, color: AppTheme.accentCyan),
+                      activeColor: AppTheme.accentCyan,
+                    ),
+                    CheckboxListTile(
+                      value: _inAppDelivery,
+                      onChanged: (v) => setState(() => _inAppDelivery = v ?? false),
+                      title: const Text('In-App Delivery', style: TextStyle(color: AppTheme.textPrimary)),
+                      subtitle: Text('RentPe handles delivery & damage protection', style: TextStyle(color: Colors.green[300], fontSize: 12)),
+                      secondary: const Icon(Icons.verified_user, color: Colors.green),
                       activeColor: AppTheme.accentCyan,
                     ),
                   ],
                 ),
-              ).animate().fadeIn(delay: 700.ms),
+              ).animate().fadeIn(delay: 710.ms),
 
-              if (_deliveryAvailable) ...[
+              if (_sellerDelivery) ...[
                 const SizedBox(height: 12),
                 GlassTextField(
                   controller: _deliveryFeeCtrl,

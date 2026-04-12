@@ -13,6 +13,9 @@ import '../chat/chats_list_screen.dart';
 import '../wallet/wallet_screen.dart';
 import '../notifications/notifications_screen.dart';
 import 'edit_profile_screen.dart';
+import 'address_screen.dart';
+import 'seller_profile_screen.dart';
+import '../subscription/subscription_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -227,6 +230,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: () => _showLocationDialog(context),
                 ),
                 _MenuItem(
+                  icon: Icons.home_outlined,
+                  label: 'My Addresses',
+                  subtitle: 'Manage delivery addresses',
+                  color: AppTheme.accentBlue,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AddressListScreen(),
+                    ),
+                  ),
+                ),
+                _MenuItem(
+                  icon: Icons.workspace_premium_outlined,
+                  label: 'Subscription',
+                  subtitle: 'Manage your plan',
+                  color: Colors.amber,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SubscriptionScreen(),
+                    ),
+                  ),
+                ),
+                _MenuItem(
                   icon: Icons.logout_rounded,
                   label: 'Sign Out',
                   color: AppTheme.error,
@@ -372,6 +399,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
+                                // Boost button
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.rocket_launch_outlined,
+                                    color: item.isBoosted ? Colors.amber : AppTheme.accentCyan,
+                                    size: 20,
+                                  ),
+                                  onPressed: () => _showBoostDialog(context, item.id, item.title),
+                                ),
                                 IconButton(
                                   icon: const Icon(Icons.delete_outline,
                                       color: AppTheme.error, size: 20),
@@ -391,6 +427,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showBoostDialog(BuildContext ctx, String itemId, String itemTitle) {
+    showDialog(
+      context: ctx,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppTheme.primaryDeep,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Boost Item', style: TextStyle(color: AppTheme.textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Promote "$itemTitle" to appear first in search results.',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+            const SizedBox(height: 16),
+            _BoostTile(label: '30 minutes', price: '₹10', onTap: () async {
+              Navigator.pop(dialogCtx);
+              final success = await ctx.read<ItemProvider>().boostItem(itemId, '30min');
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                  content: Text(success ? 'Item boosted for 30 minutes!' : (ctx.read<ItemProvider>().error ?? 'Failed')),
+                ));
+                if (success) Navigator.pop(ctx); // Close bottom sheet
+              }
+            }),
+            _BoostTile(label: '1 hour', price: '₹20', onTap: () async {
+              Navigator.pop(dialogCtx);
+              final success = await ctx.read<ItemProvider>().boostItem(itemId, '1hour');
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                  content: Text(success ? 'Item boosted for 1 hour!' : (ctx.read<ItemProvider>().error ?? 'Failed')),
+                ));
+                if (success) Navigator.pop(ctx);
+              }
+            }),
+            _BoostTile(label: '3 hours', price: '₹50', onTap: () async {
+              Navigator.pop(dialogCtx);
+              final success = await ctx.read<ItemProvider>().boostItem(itemId, '3hours');
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                  content: Text(success ? 'Item boosted for 3 hours!' : (ctx.read<ItemProvider>().error ?? 'Failed')),
+                ));
+                if (success) Navigator.pop(ctx);
+              }
+            }),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+        ],
       ),
     );
   }
@@ -607,6 +699,44 @@ class _MenuItem extends StatelessWidget {
               ),
             ),
             Icon(Icons.chevron_right_rounded, color: AppTheme.textHint),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BoostTile extends StatelessWidget {
+  final String label;
+  final String price;
+  final VoidCallback onTap;
+
+  const _BoostTile({required this.label, required this.price, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: Colors.amber.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.rocket_launch, color: Colors.amber, size: 18),
+                const SizedBox(width: 8),
+                Text(label, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+              ],
+            ),
+            Text(price, style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
           ],
         ),
       ),

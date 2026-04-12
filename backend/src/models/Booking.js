@@ -16,7 +16,7 @@ const bookingSchema = new mongoose.Schema({
   },
   deliveryOption: {
     type: String,
-    enum: ['pickup', 'delivery'],
+    enum: ['pickup', 'delivery', 'in_app_delivery'],
     default: 'pickup',
   },
   deliveryStatus: {
