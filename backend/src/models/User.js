@@ -1,55 +1,108 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 const bcrypt = require('bcryptjs');
 
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
-  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password: { type: String, required: true, minlength: 6 },
-  phone: { type: String, trim: true },
-  avatar: { type: String, default: '' },
-  location: {
-    type: { type: String, enum: ['Point'], default: 'Point' },
-    coordinates: { type: [Number], default: [0, 0] },
-    address: { type: String, default: '' },
-    city: { type: String, default: '' },
+const User = sequelize.define('User', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
   },
-  addresses: [{
-    label: { type: String, default: 'Home' },
-    addressLine1: { type: String, required: true },
-    addressLine2: { type: String, default: '' },
-    street: { type: String, default: '' },
-    city: { type: String, required: true },
-    state: { type: String, default: '' },
-    pincode: { type: String, default: '' },
-    landmark: { type: String, default: '' },
-    location: {
-      type: { type: String, enum: ['Point'], default: 'Point' },
-      coordinates: { type: [Number], default: [0, 0] },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: '',
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    unique: true,
+  },
+  password: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  phone: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+  },
+  firebaseUid: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    unique: true,
+  },
+  avatar: {
+    type: DataTypes.STRING,
+    defaultValue: '',
+  },
+  // Primary location
+  latitude: {
+    type: DataTypes.DOUBLE,
+    defaultValue: 0,
+  },
+  longitude: {
+    type: DataTypes.DOUBLE,
+    defaultValue: 0,
+  },
+  locationAddress: {
+    type: DataTypes.STRING,
+    defaultValue: '',
+  },
+  locationCity: {
+    type: DataTypes.STRING,
+    defaultValue: '',
+  },
+  rating: {
+    type: DataTypes.DOUBLE,
+    defaultValue: 0,
+  },
+  totalRatings: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  isSeller: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  isVerified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+}, {
+  tableName: 'users',
+  underscored: true,
+  timestamps: true,
+  hooks: {
+    beforeCreate: async (user) => {
+      if (user.password) {
+        user.password = await bcrypt.hash(user.password, 12);
+      }
     },
-    isDefault: { type: Boolean, default: false },
-  }],
-  rating: { type: Number, default: 0 },
-  totalRatings: { type: Number, default: 0 },
-  isVerified: { type: Boolean, default: false },
-  subscription: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription' },
-}, { timestamps: true });
-
-userSchema.index({ 'location': '2dsphere' });
-
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
+    beforeUpdate: async (user) => {
+      if (user.changed('password')) {
+        user.password = await bcrypt.hash(user.password, 12);
+      }
+    },
+  },
 });
 
-userSchema.methods.comparePassword = async function (candidatePassword) {
+User.prototype.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-userSchema.methods.toJSON = function () {
-  const obj = this.toObject();
-  delete obj.password;
-  return obj;
+User.prototype.toJSON = function () {
+  const values = Object.assign({}, this.get());
+  values._id = values.id;
+  delete values.password;
+  // Build location object for frontend compat
+  values.location = {
+    type: 'Point',
+    coordinates: [values.longitude || 0, values.latitude || 0],
+    address: values.locationAddress || '',
+    city: values.locationCity || '',
+  };
+  return values;
 };
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = User;

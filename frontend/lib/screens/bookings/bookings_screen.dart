@@ -7,7 +7,6 @@ import '../../widgets/glass_widgets.dart';
 import '../../providers/booking_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/chat_provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../models/booking_model.dart';
 import '../chat/chat_detail_screen.dart';
 import '../wallet/wallet_screen.dart';
@@ -741,7 +740,6 @@ class _BookingCard extends StatelessWidget {
   }
 
   void _openChat(BuildContext context) async {
-    final currentUserId = context.read<AuthProvider>().user?.id ?? '';
     final otherUserId = isOwnerView
         ? booking.renter?.id ?? ''
         : booking.owner?.id ?? '';

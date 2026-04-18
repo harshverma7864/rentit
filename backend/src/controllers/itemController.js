@@ -1,59 +1,40 @@
-const mongoose = require('mongoose');
-const Item = require('../models/Item');
-const Subscription = require('../models/Subscription');
-const Wallet = require('../models/Wallet');
-const User = require('../models/User');
+const { Item, Subscription, Wallet, WalletTransaction, User, Booking } = require('../models');
+const { Op } = require('sequelize');
+const sequelize = require('../config/database');
+const { v4: uuidv4 } = require('uuid');
 const { uploadToHosting } = require('../services/imageUpload');
+const { CATEGORY_SPECS, resolveParentCategory } = require('../config/categorySpecs');
 
 exports.createItem = async (req, res) => {
   try {
-    // Check subscription listing limits
-    let sub = await Subscription.findOne({ user: req.user._id });
+    let sub = await Subscription.findOne({ where: { userId: req.user.id } });
     if (!sub) {
-      sub = new Subscription({ user: req.user._id });
-      await sub.save();
-      await User.findByIdAndUpdate(req.user._id, { subscription: sub._id });
+      sub = await Subscription.create({ userId: req.user.id });
     }
-    // Check expiry
     if (sub.plan !== 'free' && sub.expiresAt && sub.expiresAt < new Date()) {
-      sub.plan = 'free';
-      sub.freeListingsRemaining = 3;
-      sub.freeContactViewsRemaining = 5;
-      sub.expiresAt = null;
-      await sub.save();
+      await sub.update({ plan: 'free', freeListingsRemaining: 3, freeContactViewsRemaining: 5, expiresAt: null });
     }
     const isPremium = sub.plan === 'premium' && (!sub.expiresAt || sub.expiresAt > new Date());
     if (!isPremium && sub.freeListingsRemaining <= 0) {
       return res.status(403).json({ error: 'Free listing limit reached. Please upgrade your plan to list more items.' });
     }
 
-    // Parse JSON fields sent as strings in multipart form data
     const body = { ...req.body };
-    if (typeof body.location === 'string') {
-      body.location = JSON.parse(body.location);
-    }
-    if (typeof body.tags === 'string') {
-      body.tags = JSON.parse(body.tags);
-    }
-    if (typeof body.deliveryOptions === 'string') {
-      body.deliveryOptions = JSON.parse(body.deliveryOptions);
-    }
-    // Convert numeric strings
-    for (const key of ['pricePerDay', 'pricePerHour', 'pricePerWeek', 'securityDeposit', 'deliveryFee', 'maxRentalDays', 'quantity']) {
+    if (typeof body.location === 'string') body.location = JSON.parse(body.location);
+    if (typeof body.tags === 'string') body.tags = JSON.parse(body.tags);
+    if (typeof body.deliveryOptions === 'string') body.deliveryOptions = JSON.parse(body.deliveryOptions);
+
+    for (const key of ['pricePerDay', 'pricePerHour', 'pricePerWeek', 'securityDeposit', 'deliveryFee', 'maxRentalDays', 'quantity', 'price']) {
       if (body[key] !== undefined) body[key] = Number(body[key]);
     }
-    // Convert boolean strings
-    if (body.deliveryAvailable !== undefined) {
-      body.deliveryAvailable = body.deliveryAvailable === 'true' || body.deliveryAvailable === true;
-    }
-    if (body.isAvailable !== undefined) {
-      body.isAvailable = body.isAvailable === 'true' || body.isAvailable === true;
+    if (body.deliveryAvailable !== undefined) body.deliveryAvailable = body.deliveryAvailable === 'true' || body.deliveryAvailable === true;
+    if (body.isAvailable !== undefined) body.isAvailable = body.isAvailable === 'true' || body.isAvailable === true;
+    if (body.specs && typeof body.specs === 'string') {
+      try { body.specs = JSON.parse(body.specs); } catch (_) { body.specs = {}; }
     }
 
-    // Generate item ID upfront so we can use it as the folder name
-    const itemId = new mongoose.Types.ObjectId();
+    const itemId = uuidv4();
 
-    // Upload images to hosting under images/items/{itemId}/
     const images = [];
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
@@ -61,24 +42,56 @@ exports.createItem = async (req, res) => {
         images.push(filename);
       }
     }
-    // Also accept filenames sent directly in body
     if (body.images) {
       const bodyImages = Array.isArray(body.images) ? body.images : [body.images];
       images.push(...bodyImages);
     }
 
-    body.images = images;
-    const item = new Item({ _id: itemId, ...body, owner: req.user._id });
-    await item.save();
+    // Extract location fields
+    const loc = body.location || {};
 
-    // Decrement listing count
+    const item = await Item.create({
+      id: itemId,
+      ownerId: req.user.id,
+      title: body.title,
+      description: body.description,
+      category: body.category,
+      images,
+      pricePerHour: body.pricePerHour || 0,
+      pricePerDay: body.pricePerDay,
+      pricePerWeek: body.pricePerWeek || 0,
+      price: body.price || 0,
+      securityDeposit: body.securityDeposit,
+      condition: body.condition || 'good',
+      latitude: loc.coordinates ? loc.coordinates[1] : (body.latitude || 0),
+      longitude: loc.coordinates ? loc.coordinates[0] : (body.longitude || 0),
+      locationAddress: loc.address || body.locationAddress || '',
+      locationAddressLine1: loc.addressLine1 || body.locationAddressLine1 || '',
+      locationAddressLine2: loc.addressLine2 || body.locationAddressLine2 || '',
+      locationStreet: loc.street || body.locationStreet || '',
+      locationCity: loc.city || body.locationCity || '',
+      locationState: loc.state || body.locationState || '',
+      locationPincode: loc.pincode || body.locationPincode || '',
+      locationLandmark: loc.landmark || body.locationLandmark || '',
+      quantity: body.quantity || 1,
+      isAvailable: body.isAvailable !== false,
+      tags: body.tags || [],
+      rules: body.rules || '',
+      maxRentalDays: body.maxRentalDays || 30,
+      deliveryAvailable: body.deliveryAvailable || false,
+      deliveryFee: body.deliveryFee || 0,
+      deliveryOptions: body.deliveryOptions || [],
+      specs: body.specs || {},
+    });
+
     if (!isPremium) {
-      sub.freeListingsRemaining -= 1;
-      await sub.save();
+      await sub.update({ freeListingsRemaining: sub.freeListingsRemaining - 1 });
     }
 
-    await item.populate('owner', 'name avatar rating');
-    res.status(201).json({ item });
+    const result = await Item.findByPk(itemId, {
+      include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'avatar', 'rating'] }],
+    });
+    res.status(201).json({ item: result });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -90,51 +103,81 @@ exports.getItems = async (req, res) => {
       search, category, minPrice, maxPrice,
       latitude, longitude, radius,
       sort, page = 1, limit = 20,
+      ...specFilters // all remaining query params are treated as spec filters
     } = req.query;
 
-    const filter = { isAvailable: true };
+    const where = { isAvailable: true };
 
     if (search) {
-      filter.$text = { $search: search };
+      where[Op.or] = [
+        { title: { [Op.iLike]: `%${search}%` } },
+        { description: { [Op.iLike]: `%${search}%` } },
+      ];
     }
-    if (category) {
-      filter.category = category;
-    }
+    if (category) where.category = category;
     if (minPrice || maxPrice) {
-      filter.pricePerDay = {};
-      if (minPrice) filter.pricePerDay.$gte = Number(minPrice);
-      if (maxPrice) filter.pricePerDay.$lte = Number(maxPrice);
+      where.pricePerDay = {};
+      if (minPrice) where.pricePerDay[Op.gte] = Number(minPrice);
+      if (maxPrice) where.pricePerDay[Op.lte] = Number(maxPrice);
     }
+
+    // Dynamic spec filters via JSONB
+    // Look up which category's schema the filter keys belong to
+    const parentCat = resolveParentCategory(category);
+    const schema = parentCat ? CATEGORY_SPECS[parentCat] : null;
+    if (schema) {
+      const validKeys = new Set(schema.fields.filter(f => f.filterable).map(f => f.key));
+      for (const [key, value] of Object.entries(specFilters)) {
+        if (!validKeys.has(key) || !value) continue;
+        const field = schema.fields.find(f => f.key === key);
+        if (field && field.type === 'select') {
+          // Exact match for select fields
+          where[`specs.${key}`] = value;
+        } else {
+          // Case-insensitive partial match for text fields
+          where[Op.and] = [
+            ...(where[Op.and] || []),
+            sequelize.where(
+              sequelize.cast(sequelize.json(`specs.${key}`), 'TEXT'),
+              { [Op.iLike]: `%${value}%` }
+            ),
+          ];
+        }
+      }
+    }
+
+    // Bounding box geo filter
     if (latitude && longitude && radius) {
-      filter.location = {
-        $near: {
-          $geometry: { type: 'Point', coordinates: [Number(longitude), Number(latitude)] },
-          $maxDistance: Number(radius) * 1000,
-        },
-      };
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      const radiusKm = parseFloat(radius);
+      if (!isNaN(lat) && !isNaN(lng) && !isNaN(radiusKm)) {
+        const latDelta = radiusKm / 111;
+        const lngDelta = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
+        where.latitude = { [Op.between]: [lat - latDelta, lat + latDelta] };
+        where.longitude = { [Op.between]: [lng - lngDelta, lng + lngDelta] };
+      }
     }
 
     // Expire old boosts
-    await Item.updateMany(
-      { isBoosted: true, boostExpiresAt: { $lt: new Date() } },
-      { isBoosted: false, boostPriority: 0 }
+    await Item.update(
+      { isBoosted: false, boostPriority: 0 },
+      { where: { isBoosted: true, boostExpiresAt: { [Op.lt]: new Date() } } }
     );
 
-    let sortOption = { isBoosted: -1, boostPriority: -1, createdAt: -1 };
-    if (sort === 'price_asc') sortOption = { isBoosted: -1, pricePerDay: 1 };
-    else if (sort === 'price_desc') sortOption = { isBoosted: -1, pricePerDay: -1 };
-    else if (sort === 'nearest' && latitude && longitude) sortOption = { isBoosted: -1 };
+    let order = [['isBoosted', 'DESC'], ['boostPriority', 'DESC'], ['createdAt', 'DESC']];
+    if (sort === 'price_asc') order = [['isBoosted', 'DESC'], ['pricePerDay', 'ASC']];
+    else if (sort === 'price_desc') order = [['isBoosted', 'DESC'], ['pricePerDay', 'DESC']];
 
-    const skip = (Number(page) - 1) * Number(limit);
+    const offset = (Number(page) - 1) * Number(limit);
 
-    const [items, total] = await Promise.all([
-      Item.find(filter)
-        .sort(sortOption)
-        .skip(skip)
-        .limit(Number(limit))
-        .populate('owner', 'name avatar rating location'),
-      Item.countDocuments(filter),
-    ]);
+    const { rows: items, count: total } = await Item.findAndCountAll({
+      where,
+      order,
+      offset,
+      limit: Number(limit),
+      include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'avatar', 'rating', 'latitude', 'longitude', 'locationAddress', 'locationCity'] }],
+    });
 
     res.json({
       items,
@@ -152,7 +195,9 @@ exports.getItems = async (req, res) => {
 
 exports.getItemById = async (req, res) => {
   try {
-    const item = await Item.findById(req.params.id).populate('owner', 'name avatar rating phone location');
+    const item = await Item.findByPk(req.params.id, {
+      include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'avatar', 'rating', 'phone', 'latitude', 'longitude', 'locationAddress', 'locationCity'] }],
+    });
     if (!item) return res.status(404).json({ error: 'Item not found' });
     res.json({ item });
   } catch (error) {
@@ -162,57 +207,68 @@ exports.getItemById = async (req, res) => {
 
 exports.updateItem = async (req, res) => {
   try {
-    const item = await Item.findOne({ _id: req.params.id, owner: req.user._id });
+    const item = await Item.findOne({ where: { id: req.params.id, ownerId: req.user.id } });
     if (!item) return res.status(404).json({ error: 'Item not found or unauthorized' });
 
     const body = { ...req.body };
-    if (typeof body.location === 'string') {
-      body.location = JSON.parse(body.location);
-    }
-    if (typeof body.tags === 'string') {
-      body.tags = JSON.parse(body.tags);
-    }
-    if (typeof body.deliveryOptions === 'string') {
-      body.deliveryOptions = JSON.parse(body.deliveryOptions);
-    }
-    for (const key of ['pricePerDay', 'pricePerHour', 'pricePerWeek', 'securityDeposit', 'deliveryFee', 'maxRentalDays', 'quantity']) {
+    if (typeof body.location === 'string') body.location = JSON.parse(body.location);
+    if (typeof body.tags === 'string') body.tags = JSON.parse(body.tags);
+    if (typeof body.deliveryOptions === 'string') body.deliveryOptions = JSON.parse(body.deliveryOptions);
+
+    for (const key of ['pricePerDay', 'pricePerHour', 'pricePerWeek', 'securityDeposit', 'deliveryFee', 'maxRentalDays', 'quantity', 'price']) {
       if (body[key] !== undefined) body[key] = Number(body[key]);
     }
-    if (body.deliveryAvailable !== undefined) {
-      body.deliveryAvailable = body.deliveryAvailable === 'true' || body.deliveryAvailable === true;
-    }
-    if (body.isAvailable !== undefined) {
-      body.isAvailable = body.isAvailable === 'true' || body.isAvailable === true;
-    }
+    if (body.deliveryAvailable !== undefined) body.deliveryAvailable = body.deliveryAvailable === 'true' || body.deliveryAvailable === true;
+    if (body.isAvailable !== undefined) body.isAvailable = body.isAvailable === 'true' || body.isAvailable === true;
 
-    // Upload new images to hosting under images/items/{itemId}/
     if (req.files && req.files.length > 0) {
       const newImages = [];
       for (const file of req.files) {
-        const filename = await uploadToHosting(file.buffer, file.originalname, file.mimetype, `items/${item._id}`);
+        const filename = await uploadToHosting(file.buffer, file.originalname, file.mimetype, `items/${item.id}`);
         newImages.push(filename);
       }
-      // Keep existing image filenames passed in body, add new uploaded ones
       const existingImages = body.images
         ? (Array.isArray(body.images) ? body.images : [body.images])
         : item.images;
       body.images = [...existingImages, ...newImages];
     }
 
-    const allowedUpdates = [
-      'title', 'description', 'category', 'images',
-      'pricePerHour', 'pricePerDay', 'pricePerWeek',
-      'securityDeposit', 'condition', 'location',
-      'isAvailable', 'tags', 'rules', 'maxRentalDays',
-      'deliveryAvailable', 'deliveryFee', 'quantity', 'deliveryOptions',
-    ];
-    for (const key of allowedUpdates) {
-      if (body[key] !== undefined) item[key] = body[key];
+    // Extract location
+    if (body.location) {
+      const loc = body.location;
+      body.latitude = loc.coordinates ? loc.coordinates[1] : body.latitude;
+      body.longitude = loc.coordinates ? loc.coordinates[0] : body.longitude;
+      body.locationAddress = loc.address || '';
+      body.locationAddressLine1 = loc.addressLine1 || '';
+      body.locationAddressLine2 = loc.addressLine2 || '';
+      body.locationStreet = loc.street || '';
+      body.locationCity = loc.city || '';
+      body.locationState = loc.state || '';
+      body.locationPincode = loc.pincode || '';
+      body.locationLandmark = loc.landmark || '';
     }
 
-    await item.save();
-    await item.populate('owner', 'name avatar rating');
-    res.json({ item });
+    const allowedUpdates = [
+      'title', 'description', 'category', 'images', 'price',
+      'pricePerHour', 'pricePerDay', 'pricePerWeek',
+      'securityDeposit', 'condition',
+      'latitude', 'longitude', 'locationAddress', 'locationAddressLine1',
+      'locationAddressLine2', 'locationStreet', 'locationCity',
+      'locationState', 'locationPincode', 'locationLandmark',
+      'isAvailable', 'tags', 'rules', 'maxRentalDays',
+      'deliveryAvailable', 'deliveryFee', 'quantity', 'deliveryOptions',
+      'specs',
+    ];
+    const updates = {};
+    for (const key of allowedUpdates) {
+      if (body[key] !== undefined) updates[key] = body[key];
+    }
+
+    await item.update(updates);
+    const result = await Item.findByPk(item.id, {
+      include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'avatar', 'rating'] }],
+    });
+    res.json({ item: result });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -220,8 +276,8 @@ exports.updateItem = async (req, res) => {
 
 exports.deleteItem = async (req, res) => {
   try {
-    const item = await Item.findOneAndDelete({ _id: req.params.id, owner: req.user._id });
-    if (!item) return res.status(404).json({ error: 'Item not found or unauthorized' });
+    const deleted = await Item.destroy({ where: { id: req.params.id, ownerId: req.user.id } });
+    if (!deleted) return res.status(404).json({ error: 'Item not found or unauthorized' });
     res.json({ message: 'Item deleted' });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -230,7 +286,10 @@ exports.deleteItem = async (req, res) => {
 
 exports.getMyItems = async (req, res) => {
   try {
-    const items = await Item.find({ owner: req.user._id }).sort({ createdAt: -1 });
+    const items = await Item.findAll({
+      where: { ownerId: req.user.id },
+      order: [['createdAt', 'DESC']],
+    });
     res.json({ items });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -238,18 +297,13 @@ exports.getMyItems = async (req, res) => {
 };
 
 exports.getCategories = async (req, res) => {
-  const categories = [
-    { id: 'clothing', name: 'Clothing & Fashion', icon: '👔' },
-    { id: 'electronics', name: 'Electronics', icon: '📱' },
-    { id: 'vehicles', name: 'Vehicles', icon: '🚗' },
-    { id: 'furniture', name: 'Furniture', icon: '🪑' },
-    { id: 'sports', name: 'Sports & Outdoors', icon: '⚽' },
-    { id: 'tools', name: 'Tools & Equipment', icon: '🔧' },
-    { id: 'party', name: 'Party & Events', icon: '🎉' },
-    { id: 'books', name: 'Books & Media', icon: '📚' },
-    { id: 'music', name: 'Musical Instruments', icon: '🎸' },
-    { id: 'other', name: 'Other', icon: '📦' },
-  ];
+  const categories = Object.entries(CATEGORY_SPECS).map(([id, spec]) => ({
+    id,
+    name: spec.name,
+    icon: spec.icon,
+    subcategories: spec.subcategories || [],
+    fields: spec.fields || [],
+  }));
   res.json({ categories });
 };
 
@@ -263,38 +317,37 @@ const BOOST_TIERS = {
 
 exports.boostItem = async (req, res) => {
   try {
-    const { tier } = req.body; // '30min', '1hour', '3hours'
+    const { tier } = req.body;
     if (!BOOST_TIERS[tier]) {
       return res.status(400).json({ error: 'Invalid boost tier. Choose 30min, 1hour, or 3hours.' });
     }
 
-    const item = await Item.findOne({ _id: req.params.id, owner: req.user._id });
+    const item = await Item.findOne({ where: { id: req.params.id, ownerId: req.user.id } });
     if (!item) return res.status(404).json({ error: 'Item not found or unauthorized' });
 
     const boostInfo = BOOST_TIERS[tier];
 
-    // Deduct from wallet
-    let wallet = await Wallet.findOne({ user: req.user._id });
+    let wallet = await Wallet.findOne({ where: { userId: req.user.id } });
     if (!wallet) {
-      wallet = new Wallet({ user: req.user._id, balance: 0 });
-      await wallet.save();
+      wallet = await Wallet.create({ userId: req.user.id, balance: 0 });
     }
     if (wallet.balance < boostInfo.price) {
       return res.status(400).json({ error: `Insufficient balance. Need ₹${boostInfo.price}` });
     }
 
-    wallet.balance -= boostInfo.price;
-    wallet.transactions.push({
+    await wallet.update({ balance: wallet.balance - boostInfo.price });
+    await WalletTransaction.create({
+      walletId: wallet.id,
       type: 'debit',
       amount: boostInfo.price,
       description: `Boost "${item.title}" for ${tier}`,
     });
-    await wallet.save();
 
-    item.isBoosted = true;
-    item.boostExpiresAt = new Date(Date.now() + boostInfo.duration);
-    item.boostPriority = boostInfo.priority;
-    await item.save();
+    await item.update({
+      isBoosted: true,
+      boostExpiresAt: new Date(Date.now() + boostInfo.duration),
+      boostPriority: boostInfo.priority,
+    });
 
     res.json({ item, wallet: { balance: wallet.balance } });
   } catch (error) {
@@ -312,29 +365,50 @@ exports.getRecommended = async (req, res) => {
   try {
     const { latitude, longitude } = req.query;
 
-    // Expire old boosts at query time
-    await Item.updateMany(
-      { isBoosted: true, boostExpiresAt: { $lt: new Date() } },
-      { isBoosted: false, boostPriority: 0 }
+    await Item.update(
+      { isBoosted: false, boostPriority: 0 },
+      { where: { isBoosted: true, boostExpiresAt: { [Op.lt]: new Date() } } }
     );
 
-    const filter = { isAvailable: true };
+    const where = { isAvailable: true };
 
     if (latitude && longitude) {
-      filter.location = {
-        $near: {
-          $geometry: { type: 'Point', coordinates: [Number(longitude), Number(latitude)] },
-          $maxDistance: 50000, // 50km
-        },
-      };
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        const latDelta = 50 / 111; // ~50km
+        const lngDelta = 50 / (111 * Math.cos(lat * Math.PI / 180));
+        where.latitude = { [Op.between]: [lat - latDelta, lat + latDelta] };
+        where.longitude = { [Op.between]: [lng - lngDelta, lng + lngDelta] };
+      }
     }
 
-    const items = await Item.find(filter)
-      .sort({ isBoosted: -1, boostPriority: -1, createdAt: -1 })
-      .limit(20)
-      .populate('owner', 'name avatar rating');
+    const items = await Item.findAll({
+      where,
+      order: [['isBoosted', 'DESC'], ['boostPriority', 'DESC'], ['createdAt', 'DESC']],
+      limit: 20,
+      include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'avatar', 'rating'] }],
+    });
 
     res.json({ items });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// ---- Item Availability Calendar ----
+
+exports.getItemAvailability = async (req, res) => {
+  try {
+    const bookings = await Booking.findAll({
+      where: {
+        itemId: req.params.id,
+        status: { [Op.in]: ['pending', 'accepted', 'active'] },
+      },
+      attributes: ['id', 'startDate', 'endDate', 'status'],
+      order: [['startDate', 'ASC']],
+    });
+    res.json({ bookings });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

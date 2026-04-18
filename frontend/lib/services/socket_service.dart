@@ -1,7 +1,7 @@
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class SocketService {
-  static const String socketUrl = 'http://10.0.2.2:3000';
+  static const String socketUrl = 'https://rentit-kappa.vercel.app';
 
   IO.Socket? _socket;
   Function(dynamic)? onNotification;

@@ -19,7 +19,7 @@ class ChatMessageModel {
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
     return ChatMessageModel(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       sender: json['sender'] is Map<String, dynamic>
           ? UserModel.fromJson(json['sender'])
           : null,
@@ -57,7 +57,7 @@ class ChatModel {
 
   factory ChatModel.fromJson(Map<String, dynamic> json) {
     return ChatModel(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       participants: (json['participants'] as List?)
               ?.map<UserModel>((e) =>
                   e is Map<String, dynamic> ? UserModel.fromJson(e) : UserModel(id: e.toString(), name: '', email: ''))

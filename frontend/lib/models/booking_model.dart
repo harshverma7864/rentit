@@ -51,6 +51,15 @@ class BookingModel {
   final String negotiationStatus;
   final List<NegotiationEntry> negotiationHistory;
   final double? finalPrice;
+  // Clothing rental fields
+  final DateTime? eventDate;
+  final String renterSize;
+  final Map<String, dynamic> sizeDetails;
+  final String alterationRequests;
+  final String alterationStatus;
+  final String securityDepositStatus;
+  final String returnStatus;
+  final String returnNote;
 
   BookingModel({
     required this.id,
@@ -77,11 +86,19 @@ class BookingModel {
     this.negotiationStatus = 'none',
     this.negotiationHistory = const [],
     this.finalPrice,
+    this.eventDate,
+    this.renterSize = '',
+    this.sizeDetails = const {},
+    this.alterationRequests = '',
+    this.alterationStatus = 'none',
+    this.securityDepositStatus = 'unpaid',
+    this.returnStatus = 'none',
+    this.returnNote = '',
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     return BookingModel(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       item: json['item'] is Map<String, dynamic>
           ? ItemModel.fromJson(json['item'])
           : null,
@@ -92,10 +109,8 @@ class BookingModel {
       owner: json['owner'] is Map<String, dynamic>
           ? UserModel.fromJson(json['owner'])
           : null,
-      startDate: DateTime.parse(
-          json['startDate'] ?? DateTime.now().toIso8601String()),
-      endDate: DateTime.parse(
-          json['endDate'] ?? DateTime.now().toIso8601String()),
+      startDate: DateTime.tryParse(json['startDate'] ?? '') ?? DateTime.now(),
+      endDate: DateTime.tryParse(json['endDate'] ?? '') ?? DateTime.now(),
       totalPrice: (json['totalPrice'] ?? 0).toDouble(),
       securityDeposit: (json['securityDeposit'] ?? 0).toDouble(),
       quantity: json['quantity'] ?? 1,
@@ -126,6 +141,16 @@ class BookingModel {
       finalPrice: json['finalPrice'] != null
           ? (json['finalPrice']).toDouble()
           : null,
+      eventDate: json['eventDate'] != null
+          ? DateTime.tryParse(json['eventDate'])
+          : null,
+      renterSize: json['renterSize'] ?? '',
+      sizeDetails: (json['sizeDetails'] as Map<String, dynamic>?) ?? {},
+      alterationRequests: json['alterationRequests'] ?? '',
+      alterationStatus: json['alterationStatus'] ?? 'none',
+      securityDepositStatus: json['securityDepositStatus'] ?? 'unpaid',
+      returnStatus: json['returnStatus'] ?? 'none',
+      returnNote: json['returnNote'] ?? '',
     );
   }
 

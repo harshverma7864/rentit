@@ -6,7 +6,6 @@ import '../providers/notification_provider.dart';
 import '../providers/chat_provider.dart';
 import 'home/home_screen.dart';
 import 'bookings/bookings_screen.dart';
-import 'notifications/notifications_screen.dart';
 import 'profile/profile_screen.dart';
 import 'items/create_item_screen.dart';
 import 'chat/chats_list_screen.dart';

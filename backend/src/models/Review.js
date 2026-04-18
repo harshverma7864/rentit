@@ -1,14 +1,47 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const reviewSchema = new mongoose.Schema({
-  reviewer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  reviewee: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', required: true },
-  rating: { type: Number, required: true, min: 1, max: 5 },
-  comment: { type: String, default: '', maxlength: 500 },
-}, { timestamps: true });
+const Review = sequelize.define('Review', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
+  reviewerId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+  },
+  revieweeId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+  },
+  bookingId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+  },
+  rating: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: { min: 1, max: 5 },
+  },
+  comment: {
+    type: DataTypes.TEXT,
+    defaultValue: '',
+  },
+}, {
+  tableName: 'reviews',
+  underscored: true,
+  timestamps: true,
+  indexes: [
+    { fields: ['reviewee_id', 'created_at'] },
+    { fields: ['booking_id', 'reviewer_id'], unique: true },
+  ],
+});
 
-reviewSchema.index({ reviewee: 1, createdAt: -1 });
-reviewSchema.index({ booking: 1, reviewer: 1 }, { unique: true });
+Review.prototype.toJSON = function () {
+  const values = Object.assign({}, this.get());
+  values._id = values.id;
+  return values;
+};
 
-module.exports = mongoose.model('Review', reviewSchema);
+module.exports = Review;

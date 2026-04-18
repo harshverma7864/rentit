@@ -14,12 +14,41 @@ class ItemProvider extends ChangeNotifier {
   int _currentPage = 1;
   int _totalPages = 1;
 
+  /// Category schemas fetched from backend
+  List<CategorySpec> _categorySpecs = [];
+  List<CategorySpec> get categorySpecs => _categorySpecs;
+
   List<ItemModel> get items => _items;
   List<ItemModel> get myItems => _myItems;
   ItemModel? get selectedItem => _selectedItem;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get hasMore => _currentPage < _totalPages;
+
+  /// Fetch category schemas (with spec field definitions) from the backend.
+  Future<void> fetchCategorySpecs() async {
+    if (_categorySpecs.isNotEmpty) return; // already cached
+    try {
+      final data = await _api.get('/items/categories');
+      _categorySpecs = (data['categories'] as List)
+          .map<CategorySpec>((e) => CategorySpec.fromJson(e))
+          .toList();
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  /// Get cached spec for a category id (resolves subcategories to parents).
+  CategorySpec? specForCategory(String? categoryId) {
+    if (categoryId == null) return null;
+    // Direct match
+    final direct = _categorySpecs.where((c) => c.id == categoryId);
+    if (direct.isNotEmpty) return direct.first;
+    // Check if it's a subcategory
+    for (final spec in _categorySpecs) {
+      if (spec.subcategories.any((s) => s.id == categoryId)) return spec;
+    }
+    return null;
+  }
 
   Future<void> fetchItems({
     String? search,
@@ -30,6 +59,7 @@ class ItemProvider extends ChangeNotifier {
     double? longitude,
     double? radius,
     String? sort,
+    Map<String, String>? specFilters,
     bool refresh = false,
   }) async {
     if (refresh) {
@@ -54,6 +84,12 @@ class ItemProvider extends ChangeNotifier {
       if (longitude != null) params['longitude'] = longitude.toString();
       if (radius != null) params['radius'] = radius.toString();
       if (sort != null) params['sort'] = sort;
+      // Dynamic spec filters – sent as top-level query params
+      if (specFilters != null) {
+        for (final entry in specFilters.entries) {
+          if (entry.value.isNotEmpty) params[entry.key] = entry.value;
+        }
+      }
 
       final data = await _api.get('/items', queryParams: params);
       final newItems = (data['items'] as List)
@@ -184,7 +220,7 @@ class ItemProvider extends ChangeNotifier {
 
   Future<bool> boostItem(String itemId, String tier) async {
     try {
-      final data = await _api.post('/items/$itemId/boost', body: {'tier': tier});
+      await _api.post('/items/$itemId/boost', body: {'tier': tier});
       await fetchMyItems();
       return true;
     } catch (e) {

@@ -1,6 +1,54 @@
 import 'user_model.dart';
 import '../services/api_service.dart';
 
+/// Describes one spec field for a category (from GET /api/items/categories).
+class SpecField {
+  final String key;
+  final String label;
+  final String type; // select, text, number, boolean
+  final List<String> options;
+  final bool filterable;
+
+  SpecField({required this.key, required this.label, required this.type, this.options = const [], this.filterable = false});
+
+  factory SpecField.fromJson(Map<String, dynamic> json) => SpecField(
+    key: json['key'] ?? '',
+    label: json['label'] ?? '',
+    type: json['type'] ?? 'text',
+    options: (json['options'] as List?)?.map<String>((e) => e.toString()).toList() ?? [],
+    filterable: json['filterable'] ?? false,
+  );
+}
+
+/// A subcategory within a parent category.
+class SubcategoryInfo {
+  final String id;
+  final String name;
+  SubcategoryInfo({required this.id, required this.name});
+  factory SubcategoryInfo.fromJson(Map<String, dynamic> json) => SubcategoryInfo(id: json['id'] ?? '', name: json['name'] ?? '');
+}
+
+/// Full category schema returned by the backend.
+class CategorySpec {
+  final String id;
+  final String name;
+  final String icon;
+  final List<SubcategoryInfo> subcategories;
+  final List<SpecField> fields;
+
+  CategorySpec({required this.id, required this.name, required this.icon, this.subcategories = const [], this.fields = const []});
+
+  factory CategorySpec.fromJson(Map<String, dynamic> json) => CategorySpec(
+    id: json['id'] ?? '',
+    name: json['name'] ?? '',
+    icon: json['icon'] ?? '📦',
+    subcategories: (json['subcategories'] as List?)?.map<SubcategoryInfo>((e) => SubcategoryInfo.fromJson(e)).toList() ?? [],
+    fields: (json['fields'] as List?)?.map<SpecField>((e) => SpecField.fromJson(e)).toList() ?? [],
+  );
+
+  List<SpecField> get filterableFields => fields.where((f) => f.filterable).toList();
+}
+
 class ItemModel {
   final String id;
   final String ownerId;
@@ -12,6 +60,7 @@ class ItemModel {
   final double pricePerHour;
   final double pricePerDay;
   final double pricePerWeek;
+  final double price;
   final double securityDeposit;
   final String condition;
   final LocationModel? location;
@@ -26,6 +75,8 @@ class ItemModel {
   final bool isBoosted;
   final DateTime? boostExpiresAt;
   final DateTime? createdAt;
+  // Category-specific attributes (JSONB from backend)
+  final Map<String, dynamic> specs;
 
   ItemModel({
     required this.id,
@@ -38,6 +89,7 @@ class ItemModel {
     this.pricePerHour = 0,
     required this.pricePerDay,
     this.pricePerWeek = 0,
+    this.price = 0,
     required this.securityDeposit,
     this.condition = 'good',
     this.location,
@@ -52,11 +104,12 @@ class ItemModel {
     this.isBoosted = false,
     this.boostExpiresAt,
     this.createdAt,
+    this.specs = const {},
   });
 
   factory ItemModel.fromJson(Map<String, dynamic> json) {
     return ItemModel(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       ownerId: json['owner'] is String ? json['owner'] : '',
       owner: json['owner'] is Map<String, dynamic>
           ? UserModel.fromJson(json['owner'])
@@ -70,6 +123,7 @@ class ItemModel {
       pricePerHour: (json['pricePerHour'] ?? 0).toDouble(),
       pricePerDay: (json['pricePerDay'] ?? 0).toDouble(),
       pricePerWeek: (json['pricePerWeek'] ?? 0).toDouble(),
+      price: (json['price'] ?? 0).toDouble(),
       securityDeposit: (json['securityDeposit'] ?? 0).toDouble(),
       condition: json['condition'] ?? 'good',
       location: json['location'] != null
@@ -94,6 +148,7 @@ class ItemModel {
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'])
           : null,
+      specs: json['specs'] is Map<String, dynamic> ? json['specs'] : {},
     );
   }
 
@@ -106,6 +161,7 @@ class ItemModel {
       'pricePerHour': pricePerHour,
       'pricePerDay': pricePerDay,
       'pricePerWeek': pricePerWeek,
+      'price': price,
       'securityDeposit': securityDeposit,
       'condition': condition,
       'isAvailable': isAvailable,
@@ -144,24 +200,42 @@ class ItemModel {
 
   String get categoryIcon {
     switch (category) {
-      case 'clothing':
-        return '👔';
+      // Main categories
       case 'electronics':
         return '📱';
       case 'vehicles':
         return '🚗';
       case 'furniture':
         return '🪑';
+      case 'clothing':
+        return '👗';
       case 'sports':
         return '⚽';
       case 'tools':
         return '🔧';
-      case 'party':
-        return '🎉';
       case 'books':
         return '📚';
-      case 'music':
-        return '🎸';
+      case 'party':
+        return '🎉';
+      case 'cameras':
+        return '📷';
+      // Clothing subcategories
+      case 'lehenga':
+      case 'saree':
+      case 'gown':
+      case 'dress':
+      case 'kurta':
+        return '👗';
+      case 'sherwani':
+        return '🤵';
+      case 'suit':
+        return '👔';
+      case 'bridal':
+        return '💍';
+      case 'indo_western':
+        return '✨';
+      case 'accessories':
+        return '👜';
       default:
         return '📦';
     }

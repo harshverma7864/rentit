@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/item_provider.dart';
 import '../../models/item_model.dart';
@@ -26,6 +25,12 @@ class _BrowseScreenState extends State<BrowseScreen> {
   double? _userLongitude;
   bool _locationLoading = false;
 
+  // Dynamic spec filters (key → selected value)
+  final Map<String, String?> _specFilters = {};
+  bool _showFilters = false;
+
+  String? _selectedSubcategory;
+
   final List<Map<String, dynamic>> _radiusOptions = [
     {'label': '5 km', 'value': 5.0},
     {'label': '10 km', 'value': 10.0},
@@ -33,24 +38,11 @@ class _BrowseScreenState extends State<BrowseScreen> {
     {'label': 'Everywhere', 'value': null},
   ];
 
-  final List<Map<String, String>> _categories = [
-    {'id': 'all', 'name': 'All', 'icon': '🏠'},
-    {'id': 'clothing', 'name': 'Clothing', 'icon': '👔'},
-    {'id': 'electronics', 'name': 'Electronics', 'icon': '📱'},
-    {'id': 'vehicles', 'name': 'Vehicles', 'icon': '🚗'},
-    {'id': 'furniture', 'name': 'Furniture', 'icon': '🪑'},
-    {'id': 'sports', 'name': 'Sports', 'icon': '⚽'},
-    {'id': 'tools', 'name': 'Tools', 'icon': '🔧'},
-    {'id': 'party', 'name': 'Party', 'icon': '🎉'},
-    {'id': 'books', 'name': 'Books', 'icon': '📚'},
-    {'id': 'music', 'name': 'Music', 'icon': '🎸'},
-    {'id': 'other', 'name': 'Other', 'icon': '📦'},
-  ];
-
   @override
   void initState() {
     super.initState();
     _selectedCategory = widget.initialCategory;
+    context.read<ItemProvider>().fetchCategorySpecs();
     _search();
   }
 
@@ -60,13 +52,38 @@ class _BrowseScreenState extends State<BrowseScreen> {
     super.dispose();
   }
 
+  bool get _hasActiveFilters => _specFilters.values.any((v) => v != null);
+
+  CategorySpec? get _currentSpec =>
+      context.read<ItemProvider>().specForCategory(_selectedCategory);
+
+  bool get _hasFilterableFields {
+    final spec = _currentSpec;
+    return spec != null && spec.filterableFields.isNotEmpty;
+  }
+
   void _search() {
+    // When a subcategory is picked, search by subcategory
+    String? searchCategory = _selectedCategory;
+    final spec = _currentSpec;
+    if (spec != null && spec.subcategories.isNotEmpty && _selectedSubcategory != null) {
+      searchCategory = _selectedSubcategory;
+    }
+
+    // Build spec filter map (only non-null values)
+    final specFilterMap = <String, String>{};
+    for (final entry in _specFilters.entries) {
+      if (entry.value != null && entry.value!.isNotEmpty) {
+        specFilterMap[entry.key] = entry.value!;
+      }
+    }
+
     context.read<ItemProvider>().fetchItems(
           refresh: true,
           search: _searchController.text.isNotEmpty
               ? _searchController.text
               : null,
-          category: _selectedCategory,
+          category: searchCategory,
           latitude: _selectedRadius != null ? _userLatitude : null,
           longitude: _selectedRadius != null ? _userLongitude : null,
           radius: _selectedRadius,
@@ -75,6 +92,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
               : _sortBy == 'price_desc'
                   ? 'price_desc'
                   : null,
+          specFilters: specFilterMap.isNotEmpty ? specFilterMap : null,
         );
   }
 
@@ -228,68 +246,86 @@ class _BrowseScreenState extends State<BrowseScreen> {
                         ),
                       ],
                     ),
+                    if (_hasFilterableFields)
+                      IconButton(
+                        onPressed: () => setState(() => _showFilters = !_showFilters),
+                        icon: Icon(
+                          Icons.tune_rounded,
+                          color: _hasActiveFilters
+                              ? AppTheme.primaryBlue
+                              : AppTheme.accentCyan,
+                        ),
+                      ),
                   ],
                 ),
               ),
 
               // Category chips
-              SizedBox(
-                height: 48,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  itemCount: _categories.length,
-                  itemBuilder: (context, index) {
-                    final cat = _categories[index];
-                    final isSelected = (_selectedCategory == null && cat['id'] == 'all') ||
-                        _selectedCategory == cat['id'];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedCategory =
-                                cat['id'] == 'all' ? null : cat['id'];
-                          });
-                          _search();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppTheme.primaryBlue
-                                : AppTheme.surfaceGlass,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected
-                                  ? AppTheme.accentCyan
-                                  : Colors.transparent,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Text(cat['icon']!, style: const TextStyle(fontSize: 14)),
-                              const SizedBox(width: 6),
-                              Text(
-                                cat['name']!,
-                                style: TextStyle(
+              Consumer<ItemProvider>(
+                builder: (context, provider, _) {
+                  final cats = provider.categorySpecs;
+                  return SizedBox(
+                    height: 48,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: cats.length + 1, // +1 for "All"
+                      itemBuilder: (context, index) {
+                        final isAll = index == 0;
+                        final cat = isAll ? null : cats[index - 1];
+                        final catId = isAll ? null : cat!.id;
+                        final isSelected = _selectedCategory == catId;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedCategory = catId;
+                                _selectedSubcategory = null;
+                                _specFilters.clear();
+                                _showFilters = false;
+                              });
+                              _search();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppTheme.primaryBlue
+                                    : AppTheme.surfaceGlass,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
                                   color: isSelected
-                                      ? Colors.white
-                                      : AppTheme.textSecondary,
-                                  fontSize: 13,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
+                                      ? AppTheme.accentCyan
+                                      : Colors.transparent,
                                 ),
                               ),
-                            ],
+                              child: Row(
+                                children: [
+                                  Text(isAll ? '✨' : cat!.icon, style: const TextStyle(fontSize: 14)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    isAll ? 'All' : cat!.name,
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? Colors.white
+                                          : AppTheme.textSecondary,
+                                      fontSize: 13,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                        );
+                      },
+                    ),
+                  );
+                },
               ),
 
               // Radius filter chips
@@ -376,6 +412,129 @@ class _BrowseScreenState extends State<BrowseScreen> {
                   ],
                 ),
               ),
+
+              // Subcategory chips (only when category has subcategories)
+              Consumer<ItemProvider>(
+                builder: (context, provider, _) {
+                  final spec = provider.specForCategory(_selectedCategory);
+                  if (spec == null || spec.subcategories.isEmpty) return const SizedBox.shrink();
+                  return SizedBox(
+                    height: 40,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      itemCount: spec.subcategories.length + 1,
+                      itemBuilder: (context, index) {
+                        final isAll = index == 0;
+                        final sub = isAll ? null : spec.subcategories[index - 1];
+                        final isSelected = isAll
+                            ? _selectedSubcategory == null
+                            : _selectedSubcategory == sub!.id;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedSubcategory = isAll ? null : sub!.id;
+                              });
+                              _search();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isSelected ? AppTheme.primaryBlue.withValues(alpha: 0.8) : AppTheme.surfaceGlass,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: isSelected ? AppTheme.accentCyan : Colors.transparent),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  isAll ? 'All ${spec.name}' : sub!.name,
+                                  style: TextStyle(
+                                    color: isSelected ? Colors.white : AppTheme.textSecondary,
+                                    fontSize: 12,
+                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+
+              // Dynamic spec filters panel
+              if (_showFilters)
+                Consumer<ItemProvider>(
+                  builder: (context, provider, _) {
+                    final spec = provider.specForCategory(_selectedCategory);
+                    if (spec == null) return const SizedBox.shrink();
+                    final filterableFields = spec.filterableFields;
+                    if (filterableFields.isEmpty) return const SizedBox.shrink();
+                    return Container(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceGlass,
+                        border: Border(
+                          bottom: BorderSide(color: AppTheme.accentBlue.withValues(alpha: 0.1)),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ...filterableFields.map((field) {
+                            if (field.type == 'select' && field.options.isNotEmpty) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(field.label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+                                  const SizedBox(height: 6),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: [null, ...field.options].map((opt) {
+                                      final isSelected = _specFilters[field.key] == opt;
+                                      return GestureDetector(
+                                        onTap: () { setState(() => _specFilters[field.key] = opt); _search(); },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: isSelected ? AppTheme.primaryBlue : AppTheme.surfaceGlassLight,
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(color: isSelected ? AppTheme.accentCyan : AppTheme.accentBlue.withValues(alpha: 0.2)),
+                                          ),
+                                          child: Text(
+                                            opt == null ? 'All' : (opt.isNotEmpty ? opt[0].toUpperCase() + opt.substring(1) : opt),
+                                            style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : AppTheme.textPrimary),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                              );
+                            }
+                            // text filterable fields  – skip in chip UI for now
+                            return const SizedBox.shrink();
+                          }),
+                          if (_hasActiveFilters)
+                            Center(
+                              child: TextButton(
+                                onPressed: () {
+                                  setState(() => _specFilters.clear());
+                                  _search();
+                                },
+                                child: const Text('Clear All Filters', style: TextStyle(color: AppTheme.accentCyan, fontSize: 13)),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
 
               // Items grid
               Expanded(

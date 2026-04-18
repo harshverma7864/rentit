@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const { User, Address } = require('../models');
 
 const auth = async (req, res, next) => {
   try {
@@ -9,7 +9,9 @@ const auth = async (req, res, next) => {
     }
     const token = authHeader.replace('Bearer ', '');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId);
+    const user = await User.findByPk(decoded.userId, {
+      include: [{ model: Address, as: 'addresses' }],
+    });
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }

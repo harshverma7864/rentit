@@ -1,53 +1,181 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const itemSchema = new mongoose.Schema({
-  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  title: { type: String, required: true, trim: true },
-  description: { type: String, required: true },
+const Item = sequelize.define('Item', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
+  ownerId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+  },
+  title: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+  },
   category: {
-    type: String,
-    required: true,
-    enum: ['clothing', 'electronics', 'vehicles', 'furniture', 'sports', 'tools', 'party', 'books', 'music', 'other'],
+    type: DataTypes.STRING,
+    allowNull: false,
   },
-  images: [{ type: String }],
-  pricePerHour: { type: Number, default: 0 },
-  pricePerDay: { type: Number, required: true },
-  pricePerWeek: { type: Number, default: 0 },
-  securityDeposit: { type: Number, required: true },
+  // Category-specific attributes stored as JSONB.
+  // Schema for each category is defined in config/categorySpecs.js
+  specs: {
+    type: DataTypes.JSONB,
+    defaultValue: {},
+  },
+  images: {
+    type: DataTypes.ARRAY(DataTypes.TEXT),
+    defaultValue: [],
+  },
+  pricePerHour: {
+    type: DataTypes.DOUBLE,
+    defaultValue: 0,
+  },
+  pricePerDay: {
+    type: DataTypes.DOUBLE,
+    allowNull: false,
+  },
+  pricePerWeek: {
+    type: DataTypes.DOUBLE,
+    defaultValue: 0,
+  },
+  price: {
+    type: DataTypes.DOUBLE,
+    defaultValue: 0,
+  },
+  securityDeposit: {
+    type: DataTypes.DOUBLE,
+    allowNull: false,
+  },
   condition: {
-    type: String,
-    enum: ['new', 'like_new', 'good', 'fair'],
-    default: 'good',
+    type: DataTypes.STRING,
+    defaultValue: 'good',
+    validate: {
+      isIn: [['new', 'like_new', 'good', 'fair']],
+    },
   },
-  location: {
-    type: { type: String, enum: ['Point'], default: 'Point' },
-    coordinates: { type: [Number], default: [0, 0] },
-    address: { type: String, default: '' },
-    addressLine1: { type: String, default: '' },
-    addressLine2: { type: String, default: '' },
-    street: { type: String, default: '' },
-    city: { type: String, default: '' },
-    state: { type: String, default: '' },
-    pincode: { type: String, default: '' },
-    landmark: { type: String, default: '' },
+  // Location fields
+  latitude: {
+    type: DataTypes.DOUBLE,
+    defaultValue: 0,
   },
-  quantity: { type: Number, default: 1, min: 1 },
-  isAvailable: { type: Boolean, default: true },
-  tags: [{ type: String }],
-  rules: { type: String, default: '' },
-  maxRentalDays: { type: Number, default: 30 },
-  deliveryAvailable: { type: Boolean, default: false },
-  deliveryFee: { type: Number, default: 0 },
-  deliveryOptions: [{
-    type: String,
-    enum: ['self_pickup', 'seller_delivery', 'in_app_delivery'],
-  }],
-  isBoosted: { type: Boolean, default: false },
-  boostExpiresAt: { type: Date },
-  boostPriority: { type: Number, default: 0 },
-}, { timestamps: true });
+  longitude: {
+    type: DataTypes.DOUBLE,
+    defaultValue: 0,
+  },
+  locationAddress: {
+    type: DataTypes.STRING,
+    defaultValue: '',
+  },
+  locationAddressLine1: {
+    type: DataTypes.STRING,
+    defaultValue: '',
+  },
+  locationAddressLine2: {
+    type: DataTypes.STRING,
+    defaultValue: '',
+  },
+  locationStreet: {
+    type: DataTypes.STRING,
+    defaultValue: '',
+  },
+  locationCity: {
+    type: DataTypes.STRING,
+    defaultValue: '',
+  },
+  locationState: {
+    type: DataTypes.STRING,
+    defaultValue: '',
+  },
+  locationPincode: {
+    type: DataTypes.STRING,
+    defaultValue: '',
+  },
+  locationLandmark: {
+    type: DataTypes.STRING,
+    defaultValue: '',
+  },
+  quantity: {
+    type: DataTypes.INTEGER,
+    defaultValue: 1,
+  },
+  isAvailable: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
+  tags: {
+    type: DataTypes.ARRAY(DataTypes.TEXT),
+    defaultValue: [],
+  },
+  rules: {
+    type: DataTypes.TEXT,
+    defaultValue: '',
+  },
+  maxRentalDays: {
+    type: DataTypes.INTEGER,
+    defaultValue: 30,
+  },
+  deliveryAvailable: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  deliveryFee: {
+    type: DataTypes.DOUBLE,
+    defaultValue: 0,
+  },
+  deliveryOptions: {
+    type: DataTypes.ARRAY(DataTypes.TEXT),
+    defaultValue: [],
+  },
+  isBoosted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  boostExpiresAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  boostPriority: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+}, {
+  tableName: 'items',
+  underscored: true,
+  timestamps: true,
+  indexes: [
+    { fields: ['owner_id'] },
+    { fields: ['category'] },
+    { fields: ['is_available'] },
+    { fields: ['is_boosted'] },
+    { fields: ['latitude', 'longitude'] },
+    { fields: ['specs'], using: 'gin' },
+  ],
+});
 
-itemSchema.index({ location: '2dsphere' });
-itemSchema.index({ title: 'text', description: 'text', tags: 'text' });
+Item.prototype.toJSON = function () {
+  const values = Object.assign({}, this.get());
+  values._id = values.id;
+  values.owner = values.owner || values.ownerId;
+  values.location = {
+    type: 'Point',
+    coordinates: [values.longitude || 0, values.latitude || 0],
+    address: values.locationAddress || '',
+    addressLine1: values.locationAddressLine1 || '',
+    addressLine2: values.locationAddressLine2 || '',
+    street: values.locationStreet || '',
+    city: values.locationCity || '',
+    state: values.locationState || '',
+    pincode: values.locationPincode || '',
+    landmark: values.locationLandmark || '',
+  };
+  return values;
+};
 
-module.exports = mongoose.model('Item', itemSchema);
+module.exports = Item;

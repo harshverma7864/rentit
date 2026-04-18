@@ -10,6 +10,7 @@ class UserModel {
   final List<AddressModel> addresses;
   final double rating;
   final int totalRatings;
+  final bool isSeller;
   final bool isVerified;
   final bool contactLocked;
   final int itemCount;
@@ -25,6 +26,7 @@ class UserModel {
     this.addresses = const [],
     this.rating = 0,
     this.totalRatings = 0,
+    this.isSeller = false,
     this.isVerified = false,
     this.contactLocked = false,
     this.itemCount = 0,
@@ -33,7 +35,7 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       name: json['name'] ?? '',
       email: json['email'] ?? '',
       phone: json['phone'] ?? '',
@@ -47,6 +49,7 @@ class UserModel {
           [],
       rating: (json['rating'] ?? 0).toDouble(),
       totalRatings: json['totalRatings'] ?? 0,
+      isSeller: json['isSeller'] ?? false,
       isVerified: json['isVerified'] ?? false,
       contactLocked: json['contactLocked'] ?? false,
       itemCount: json['itemCount'] ?? 0,
@@ -67,6 +70,19 @@ class UserModel {
   /// Build full avatar URL: baseUrl/avatars/{id}/{filename}
   String get avatarUrl =>
       avatar.isNotEmpty ? '${ApiService.imageBaseUrl}/avatars/$id/$avatar' : '';
+
+  /// Checks which profile fields are still missing.
+  List<String> get incompleteFields {
+    final missing = <String>[];
+    if (name.isEmpty) missing.add('Name');
+    if (email.isEmpty) missing.add('Email');
+    if (phone.isEmpty) missing.add('Phone');
+    if (avatar.isEmpty) missing.add('Profile Photo');
+    if (location == null || location!.city.isEmpty) missing.add('Location');
+    return missing;
+  }
+
+  bool get isProfileComplete => incompleteFields.isEmpty;
 }
 
 class AddressModel {
@@ -98,7 +114,7 @@ class AddressModel {
 
   factory AddressModel.fromJson(Map<String, dynamic> json) {
     return AddressModel(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       label: json['label'] ?? 'Home',
       addressLine1: json['addressLine1'] ?? '',
       addressLine2: json['addressLine2'] ?? '',

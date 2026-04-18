@@ -22,12 +22,21 @@ class ItemDetailScreen extends StatefulWidget {
 }
 
 class _ItemDetailScreenState extends State<ItemDetailScreen> {
+  final PageController _imagePageController = PageController();
+  int _currentImageIndex = 0;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ItemProvider>().fetchItemById(widget.itemId);
     });
+  }
+
+  @override
+  void dispose() {
+    _imagePageController.dispose();
+    super.dispose();
   }
 
   void _showRentBottomSheet() {
@@ -52,8 +61,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           }
 
           final item = provider.selectedItem!;
+          final currentUserId = context.read<AuthProvider>().user?.id;
           final isOwner =
-              item.owner?.id == context.read<AuthProvider>().user?.id;
+              currentUserId != null && item.owner?.id == currentUserId;
 
           return Container(
             decoration: const BoxDecoration(
@@ -96,22 +106,111 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               ],
                             ),
                           ),
-                          child: Center(
-                            child: item.imageUrls.isNotEmpty
-                                ? Image.network(
-                                    item.imageUrls.first,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    errorBuilder: (_, __, ___) => Text(
-                                      item.categoryIcon,
-                                      style: const TextStyle(fontSize: 80),
+                          child: item.imageUrls.isNotEmpty
+                              ? Stack(
+                                  children: [
+                                    PageView.builder(
+                                      controller: _imagePageController,
+                                      itemCount: item.imageUrls.length,
+                                      onPageChanged: (index) {
+                                        setState(() {
+                                          _currentImageIndex = index;
+                                        });
+                                      },
+                                      itemBuilder: (context, index) {
+                                        return GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => _FullScreenImageViewer(
+                                                  imageUrls: item.imageUrls,
+                                                  initialIndex: index,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          child: Image.network(
+                                            item.imageUrls[index],
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            errorBuilder: (_, __, ___) =>
+                                                Center(
+                                              child: Text(
+                                                item.categoryIcon,
+                                                style: const TextStyle(
+                                                    fontSize: 80),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
                                     ),
-                                  )
-                                : Text(
+                                    // Image counter badge
+                                    if (item.imageUrls.length > 1)
+                                      Positioned(
+                                        right: 16,
+                                        bottom: 16,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black54,
+                                            borderRadius:
+                                                BorderRadius.circular(16),
+                                          ),
+                                          child: Text(
+                                            '${_currentImageIndex + 1} / ${item.imageUrls.length}',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    // Dot indicators
+                                    if (item.imageUrls.length > 1)
+                                      Positioned(
+                                        bottom: 16,
+                                        left: 0,
+                                        right: 0,
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: List.generate(
+                                            item.imageUrls.length,
+                                            (index) => AnimatedContainer(
+                                              duration: const Duration(
+                                                  milliseconds: 300),
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 3),
+                                              width:
+                                                  _currentImageIndex == index
+                                                      ? 20
+                                                      : 8,
+                                              height: 8,
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    _currentImageIndex == index
+                                                        ? AppTheme.accentCyan
+                                                        : Colors.white54,
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                )
+                              : Center(
+                                  child: Text(
                                     item.categoryIcon,
                                     style: const TextStyle(fontSize: 80),
                                   ),
-                          ),
+                                ),
                         ),
                       ),
                     ),
@@ -266,6 +365,50 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               ),
                             ).animate().fadeIn(delay: 400.ms),
 
+                            // Specs section (dynamic, from JSONB)
+                            if (item.specs.isNotEmpty) ...[
+                              const SizedBox(height: 24),
+                              _SectionTitle(text: 'Specifications'),
+                              const SizedBox(height: 12),
+                              GlassCard(
+                                margin: EdgeInsets.zero,
+                                child: Column(
+                                  children: item.specs.entries.map((e) {
+                                    final label = e.key[0].toUpperCase() +
+                                        e.key.substring(1).replaceAllMapped(
+                                            RegExp(r'[A-Z]'),
+                                            (m) => ' ${m.group(0)}');
+                                    final value = e.value is bool
+                                        ? (e.value ? 'Yes' : 'No')
+                                        : e.value.toString();
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 4),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(label,
+                                              style: TextStyle(
+                                                  color: AppTheme.textSecondary,
+                                                  fontSize: 14)),
+                                          Text(
+                                            value.isNotEmpty
+                                                ? value[0].toUpperCase() +
+                                                    value.substring(1)
+                                                : value,
+                                            style: const TextStyle(
+                                                color: AppTheme.textPrimary,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ).animate().fadeIn(delay: 450.ms),
+                            ],
+
                             if (item.rules.isNotEmpty) ...[
                               const SizedBox(height: 24),
                               _SectionTitle(text: 'Rental Rules'),
@@ -305,7 +448,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                               : null,
                                           child: item.owner!.avatarUrl.isEmpty
                                               ? Text(
-                                                  item.owner!.name[0].toUpperCase(),
+                                                  item.owner!.name.isNotEmpty ? item.owner!.name[0].toUpperCase() : '?',
                                                   style: const TextStyle(
                                                     fontSize: 20,
                                                     fontWeight: FontWeight.w600,
@@ -1029,6 +1172,138 @@ class _PriceRow extends StatelessWidget {
               fontWeight: highlight ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FullScreenImageViewer extends StatefulWidget {
+  final List<String> imageUrls;
+  final int initialIndex;
+
+  const _FullScreenImageViewer({
+    required this.imageUrls,
+    required this.initialIndex,
+  });
+
+  @override
+  State<_FullScreenImageViewer> createState() => _FullScreenImageViewerState();
+}
+
+class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Swipeable images
+          PageView.builder(
+            controller: _pageController,
+            itemCount: widget.imageUrls.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              return InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: Center(
+                  child: Image.network(
+                    widget.imageUrls[index],
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.broken_image,
+                      color: Colors.white54,
+                      size: 64,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          // Close button
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            left: 16,
+            child: IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 20),
+              ),
+            ),
+          ),
+          // Image counter
+          if (widget.imageUrls.length > 1)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 16,
+              right: 16,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  '${_currentIndex + 1} / ${widget.imageUrls.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          // Bottom dot indicators
+          if (widget.imageUrls.length > 1)
+            Positioned(
+              bottom: MediaQuery.of(context).padding.bottom + 24,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  widget.imageUrls.length,
+                  (index) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: _currentIndex == index ? 20 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: _currentIndex == index
+                          ? AppTheme.accentCyan
+                          : Colors.white54,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -3,9 +3,9 @@
     "short_name": "RentPe",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F5F0EB",
+    "theme_color": "#D4A0A0",
+    "description": "Rent stunning outfits for every occasion near you.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

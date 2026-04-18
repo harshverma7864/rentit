@@ -2,23 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Blue shades palette
-  static const Color primaryDark = Color(0xFF0A1628);
-  static const Color primaryDeep = Color(0xFF0F2042);
-  static const Color primaryBlue = Color(0xFF1565C0);
-  static const Color primaryLight = Color(0xFF42A5F5);
-  static const Color accentBlue = Color(0xFF64B5F6);
-  static const Color accentCyan = Color(0xFF4FC3F7);
-  static const Color surfaceGlass = Color(0x1AFFFFFF);
-  static const Color surfaceGlassLight = Color(0x33FFFFFF);
-  static const Color surfaceGlassMedium = Color(0x4DFFFFFF);
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xB3FFFFFF);
-  static const Color textHint = Color(0x66FFFFFF);
-  static const Color success = Color(0xFF4CAF50);
-  static const Color warning = Color(0xFFFF9800);
-  static const Color error = Color(0xFFEF5350);
-  static const Color cardBg = Color(0xFF122140);
+  // Deep brown & beige palette
+  static const Color primaryDark = Color(0xFF1C120D);       // Very dark brown bg
+  static const Color primaryDeep = Color(0xFF2A1A12);       // Deeper brown
+  static const Color primaryBlue = Color(0xFF6D4C2E);       // Rich brown (primary action)
+  static const Color primaryLight = Color(0xFF8D6E4C);      // Lighter warm brown
+  static const Color accentBlue = Color(0xFFD4B896);        // Soft beige accent
+  static const Color accentCyan = Color(0xFFC9A66B);        // Warm gold/caramel accent
+  static const Color surfaceGlass = Color(0x33FFFFFF);      // Glass overlay
+  static const Color surfaceGlassLight = Color(0x4DFFFFFF);
+  static const Color surfaceGlassMedium = Color(0x66FFFFFF);
+  static const Color textPrimary = Color(0xFFF5EDE4);       // Warm off-white text
+  static const Color textSecondary = Color(0xB3F5EDE4);     // 70% off-white
+  static const Color textHint = Color(0x66F5EDE4);          // 40% off-white
+  static const Color success = Color(0xFF6B8E4E);           // Olive green
+  static const Color warning = Color(0xFFD4A03C);           // Amber
+  static const Color error = Color(0xFFC0392B);             // Muted red
+  static const Color cardBg = Color(0xFF33211A);            // Dark brown card
 
   static ThemeData get darkTheme {
     return ThemeData(
@@ -41,6 +41,7 @@ class AppTheme {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
+        iconTheme: const IconThemeData(color: textPrimary),
         titleTextStyle: GoogleFonts.poppins(
           fontSize: 20,
           fontWeight: FontWeight.w600,
@@ -63,6 +64,7 @@ class AppTheme {
           borderSide: const BorderSide(color: accentCyan, width: 2),
         ),
         hintStyle: const TextStyle(color: textHint),
+        labelStyle: const TextStyle(color: textSecondary),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(

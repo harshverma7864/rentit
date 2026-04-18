@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/glass_widgets.dart';
 import '../../providers/auth_provider.dart';
+import '../../models/user_model.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -16,6 +17,7 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameCtrl;
+  late TextEditingController _emailCtrl;
   late TextEditingController _phoneCtrl;
   String? _avatarPath;
   bool _isLoading = false;
@@ -25,12 +27,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.initState();
     final user = context.read<AuthProvider>().user;
     _nameCtrl = TextEditingController(text: user?.name ?? '');
+    _emailCtrl = TextEditingController(text: user?.email ?? '');
     _phoneCtrl = TextEditingController(text: user?.phone ?? '');
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _emailCtrl.dispose();
     _phoneCtrl.dispose();
     super.dispose();
   }
@@ -58,6 +62,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final auth = context.read<AuthProvider>();
     final success = await auth.updateProfile(
       name: _nameCtrl.text.trim(),
+      email: _emailCtrl.text.trim().isNotEmpty ? _emailCtrl.text.trim() : null,
       phone: _phoneCtrl.text.trim(),
       avatarPath: _avatarPath,
     );
@@ -117,7 +122,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         child: (_avatarPath == null &&
                                 (user?.avatarUrl == null || user!.avatarUrl.isEmpty))
                             ? Text(
-                                (user?.name ?? 'U')[0].toUpperCase(),
+                                (user?.name ?? '').isNotEmpty ? user!.name[0].toUpperCase() : 'U',
                                 style: const TextStyle(
                                   fontSize: 40,
                                   fontWeight: FontWeight.w700,
@@ -154,6 +159,40 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 32),
 
+              // Incomplete profile warning
+              if (user != null && !user.isProfileComplete)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded, color: Colors.orange, size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Complete your profile',
+                              style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 14),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Missing: ${user.incompleteFields.join(', ')}',
+                              style: TextStyle(color: Colors.orange.shade200, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               GlassTextField(
                 controller: _nameCtrl,
                 labelText: 'Name',
@@ -161,6 +200,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 prefixIcon: Icons.person_outline_rounded,
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Name is required' : null,
+              ),
+              const SizedBox(height: 16),
+
+              GlassTextField(
+                controller: _emailCtrl,
+                labelText: 'Email',
+                hintText: 'Enter your email address',
+                prefixIcon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
 

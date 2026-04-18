@@ -1,10 +1,9 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const Item = require('../models/Item');
-const Review = require('../models/Review');
-const Subscription = require('../models/Subscription');
-const Booking = require('../models/Booking');
+const { User, Address, Item, Review, Subscription, Booking, ContactView } = require('../models');
+const { Op } = require('sequelize');
+const sequelize = require('../config/database');
 const { uploadToHosting } = require('../services/imageUpload');
+const firebaseAdmin = require('../services/firebase');
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -14,15 +13,14 @@ exports.register = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ where: { email: email.toLowerCase().trim() } });
     if (existingUser) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    const user = new User({ name, email, password, phone });
-    await user.save();
+    const user = await User.create({ name, email: email.toLowerCase().trim(), password, phone });
 
-    const token = generateToken(user._id);
+    const token = generateToken(user.id);
     res.status(201).json({ user, token });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -33,12 +31,12 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ where: { email: email.toLowerCase().trim() } });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user.id);
     res.json({ user, token });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -46,12 +44,15 @@ exports.login = async (req, res) => {
 };
 
 exports.getProfile = async (req, res) => {
-  res.json({ user: req.user });
+  const user = await User.findByPk(req.user.id, {
+    include: [{ model: Address, as: 'addresses', order: [['isDefault', 'DESC']] }],
+  });
+  res.json({ user });
 };
 
 exports.updateProfile = async (req, res) => {
   try {
-    const allowedUpdates = ['name', 'phone', 'avatar', 'location'];
+    const allowedUpdates = ['name', 'email', 'phone'];
     const updates = {};
     for (const key of allowedUpdates) {
       if (req.body[key] !== undefined) {
@@ -59,13 +60,15 @@ exports.updateProfile = async (req, res) => {
       }
     }
 
-    // Handle avatar file upload to hosting under images/avatars/{userId}/
     if (req.file) {
-      const filename = await uploadToHosting(req.file.buffer, req.file.originalname, req.file.mimetype, `avatars/${req.user._id}`);
+      const filename = await uploadToHosting(req.file.buffer, req.file.originalname, req.file.mimetype, `avatars/${req.user.id}`);
       updates.avatar = filename;
     }
 
-    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
+    await User.update(updates, { where: { id: req.user.id } });
+    const user = await User.findByPk(req.user.id, {
+      include: [{ model: Address, as: 'addresses' }],
+    });
     res.json({ user });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -75,18 +78,16 @@ exports.updateProfile = async (req, res) => {
 exports.updateLocation = async (req, res) => {
   try {
     const { latitude, longitude, address, city } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
+    await User.update(
       {
-        location: {
-          type: 'Point',
-          coordinates: [longitude, latitude],
-          address: address || '',
-          city: city || '',
-        },
+        latitude: latitude || 0,
+        longitude: longitude || 0,
+        locationAddress: address || '',
+        locationCity: city || '',
       },
-      { new: true }
+      { where: { id: req.user.id } }
     );
+    const user = await User.findByPk(req.user.id);
     res.json({ user });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -95,28 +96,29 @@ exports.updateLocation = async (req, res) => {
 
 exports.getPublicProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
+    const user = await User.findByPk(req.params.id, {
+      include: [{ model: Address, as: 'addresses' }],
+    });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Contact view limit check
     let contactLocked = false;
-    if (req.user && req.user._id.toString() !== req.params.id) {
-      let sub = await Subscription.findOne({ user: req.user._id });
+    if (req.user && req.user.id !== req.params.id) {
+      let sub = await Subscription.findOne({ where: { userId: req.user.id } });
       if (!sub) {
-        sub = new Subscription({ user: req.user._id });
-        await sub.save();
+        sub = await Subscription.create({ userId: req.user.id });
       }
       const isPremium = sub.plan === 'premium' && (!sub.expiresAt || sub.expiresAt > new Date());
       const isBasic = sub.plan === 'basic' && (!sub.expiresAt || sub.expiresAt > new Date());
-      const alreadyViewed = sub.contactViewsUsed.some(id => id.toString() === req.params.id);
+      const alreadyViewed = await ContactView.findOne({
+        where: { subscriptionId: sub.id, viewedUserId: req.params.id },
+      });
 
       if (!alreadyViewed && !isPremium) {
         if (sub.freeContactViewsRemaining > 0 || isBasic) {
           if (sub.plan === 'free') {
-            sub.freeContactViewsRemaining -= 1;
+            await sub.update({ freeContactViewsRemaining: sub.freeContactViewsRemaining - 1 });
           }
-          sub.contactViewsUsed.push(req.params.id);
-          await sub.save();
+          await ContactView.create({ subscriptionId: sub.id, viewedUserId: req.params.id });
         } else {
           contactLocked = true;
         }
@@ -133,10 +135,9 @@ exports.getPublicProfile = async (req, res) => {
       userObj.contactLocked = false;
     }
 
-    // Add item count and completed bookings count
     const [itemCount, completedBookings] = await Promise.all([
-      Item.countDocuments({ owner: req.params.id }),
-      Booking.countDocuments({ owner: req.params.id, status: 'completed' }),
+      Item.count({ where: { ownerId: req.params.id } }),
+      Booking.count({ where: { ownerId: req.params.id, status: 'completed' } }),
     ]);
     userObj.itemCount = itemCount;
     userObj.completedBookings = completedBookings;
@@ -156,7 +157,15 @@ exports.addAddress = async (req, res) => {
       return res.status(400).json({ error: 'addressLine1 and city are required' });
     }
 
-    const address = {
+    if (isDefault) {
+      await Address.update({ isDefault: false }, { where: { userId: req.user.id } });
+    }
+
+    const existingCount = await Address.count({ where: { userId: req.user.id } });
+    const shouldBeDefault = isDefault || existingCount === 0;
+
+    await Address.create({
+      userId: req.user.id,
       label: label || 'Home',
       addressLine1,
       addressLine2: addressLine2 || '',
@@ -165,23 +174,13 @@ exports.addAddress = async (req, res) => {
       state: state || '',
       pincode: pincode || '',
       landmark: landmark || '',
-      location: {
-        type: 'Point',
-        coordinates: [longitude || 0, latitude || 0],
-      },
-      isDefault: isDefault || false,
-    };
+      latitude: latitude || 0,
+      longitude: longitude || 0,
+      isDefault: shouldBeDefault,
+    });
 
-    const user = await User.findById(req.user._id);
-    if (address.isDefault) {
-      user.addresses.forEach(a => { a.isDefault = false; });
-    }
-    if (user.addresses.length === 0) {
-      address.isDefault = true;
-    }
-    user.addresses.push(address);
-    await user.save();
-    res.status(201).json({ addresses: user.addresses });
+    const addresses = await Address.findAll({ where: { userId: req.user.id } });
+    res.status(201).json({ addresses });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -189,24 +188,25 @@ exports.addAddress = async (req, res) => {
 
 exports.updateAddress = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
-    const address = user.addresses.id(req.params.addressId);
+    const address = await Address.findOne({ where: { id: req.params.addressId, userId: req.user.id } });
     if (!address) return res.status(404).json({ error: 'Address not found' });
 
     const fields = ['label', 'addressLine1', 'addressLine2', 'street', 'city', 'state', 'pincode', 'landmark'];
+    const updates = {};
     for (const f of fields) {
-      if (req.body[f] !== undefined) address[f] = req.body[f];
+      if (req.body[f] !== undefined) updates[f] = req.body[f];
     }
-    if (req.body.latitude !== undefined && req.body.longitude !== undefined) {
-      address.location = { type: 'Point', coordinates: [req.body.longitude, req.body.latitude] };
-    }
+    if (req.body.latitude !== undefined) updates.latitude = req.body.latitude;
+    if (req.body.longitude !== undefined) updates.longitude = req.body.longitude;
+
     if (req.body.isDefault) {
-      user.addresses.forEach(a => { a.isDefault = false; });
-      address.isDefault = true;
+      await Address.update({ isDefault: false }, { where: { userId: req.user.id } });
+      updates.isDefault = true;
     }
 
-    await user.save();
-    res.json({ addresses: user.addresses });
+    await address.update(updates);
+    const addresses = await Address.findAll({ where: { userId: req.user.id } });
+    res.json({ addresses });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -214,17 +214,19 @@ exports.updateAddress = async (req, res) => {
 
 exports.deleteAddress = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
-    const address = user.addresses.id(req.params.addressId);
+    const address = await Address.findOne({ where: { id: req.params.addressId, userId: req.user.id } });
     if (!address) return res.status(404).json({ error: 'Address not found' });
 
     const wasDefault = address.isDefault;
-    user.addresses.pull(req.params.addressId);
-    if (wasDefault && user.addresses.length > 0) {
-      user.addresses[0].isDefault = true;
+    await address.destroy();
+
+    if (wasDefault) {
+      const first = await Address.findOne({ where: { userId: req.user.id }, order: [['createdAt', 'ASC']] });
+      if (first) await first.update({ isDefault: true });
     }
-    await user.save();
-    res.json({ addresses: user.addresses });
+
+    const addresses = await Address.findAll({ where: { userId: req.user.id } });
+    res.json({ addresses });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -232,14 +234,14 @@ exports.deleteAddress = async (req, res) => {
 
 exports.setDefaultAddress = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
-    const address = user.addresses.id(req.params.addressId);
+    const address = await Address.findOne({ where: { id: req.params.addressId, userId: req.user.id } });
     if (!address) return res.status(404).json({ error: 'Address not found' });
 
-    user.addresses.forEach(a => { a.isDefault = false; });
-    address.isDefault = true;
-    await user.save();
-    res.json({ addresses: user.addresses });
+    await Address.update({ isDefault: false }, { where: { userId: req.user.id } });
+    await address.update({ isDefault: true });
+
+    const addresses = await Address.findAll({ where: { userId: req.user.id } });
+    res.json({ addresses });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -247,11 +249,23 @@ exports.setDefaultAddress = async (req, res) => {
 
 // ---- Seller Profile ----
 
+exports.becomeSeller = async (req, res) => {
+  try {
+    await User.update({ isSeller: true }, { where: { id: req.user.id } });
+    const user = await User.findByPk(req.user.id);
+    res.json({ user });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
 exports.getUserItems = async (req, res) => {
   try {
-    const items = await Item.find({ owner: req.params.id, isAvailable: true })
-      .sort({ isBoosted: -1, createdAt: -1 })
-      .populate('owner', 'name avatar rating');
+    const items = await Item.findAll({
+      where: { ownerId: req.params.id, isAvailable: true },
+      order: [['isBoosted', 'DESC'], ['createdAt', 'DESC']],
+      include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'avatar', 'rating'] }],
+    });
     res.json({ items });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -260,11 +274,72 @@ exports.getUserItems = async (req, res) => {
 
 exports.getUserReviews = async (req, res) => {
   try {
-    const reviews = await Review.find({ reviewee: req.params.id })
-      .sort({ createdAt: -1 })
-      .populate('reviewer', 'name avatar');
+    const reviews = await Review.findAll({
+      where: { revieweeId: req.params.id },
+      order: [['createdAt', 'DESC']],
+      include: [{ model: User, as: 'reviewer', attributes: ['id', 'name', 'avatar'] }],
+    });
     res.json({ reviews });
   } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// ---- Firebase OTP Auth ----
+
+exports.firebaseAuth = async (req, res) => {
+  try {
+    const { firebaseToken, name } = req.body;
+    if (!firebaseToken) {
+      return res.status(400).json({ error: 'Firebase token is required' });
+    }
+
+    // Verify the Firebase ID token
+    const decodedToken = await firebaseAdmin.auth().verifyIdToken(firebaseToken);
+    const { uid, phone_number } = decodedToken;
+
+    if (!phone_number) {
+      return res.status(400).json({ error: 'Phone number not found in token' });
+    }
+
+    // Check if user exists by firebaseUid or phone
+    let user = await User.findOne({
+      where: {
+        [Op.or]: [
+          { firebaseUid: uid },
+          { phone: phone_number },
+        ],
+      },
+      include: [{ model: Address, as: 'addresses' }],
+    });
+
+    let isNewUser = false;
+
+    if (user) {
+      // Existing user — update firebaseUid if not set
+      if (!user.firebaseUid) {
+        await user.update({ firebaseUid: uid, isVerified: true });
+      }
+    } else {
+      // New user — create account
+      user = await User.create({
+        name: name || '',
+        phone: phone_number,
+        firebaseUid: uid,
+        isVerified: true,
+      });
+      isNewUser = true;
+    }
+
+    const token = generateToken(user.id);
+    res.json({ user, token, isNewUser });
+  } catch (error) {
+    if (error.code === 'auth/id-token-expired') {
+      return res.status(401).json({ error: 'Firebase token expired' });
+    }
+    if (error.code === 'auth/argument-error') {
+      return res.status(400).json({ error: 'Invalid Firebase token' });
+    }
     res.status(400).json({ error: error.message });
   }
 };

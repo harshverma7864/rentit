@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/glass_widgets.dart';
@@ -7,7 +6,6 @@ import '../../models/user_model.dart';
 import '../../models/item_model.dart';
 import '../../models/review_model.dart';
 import '../../services/api_service.dart';
-import '../../providers/review_provider.dart';
 import '../items/item_detail_screen.dart';
 
 class SellerProfileScreen extends StatefulWidget {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'theme/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/item_provider.dart';
@@ -10,11 +11,17 @@ import 'providers/chat_provider.dart';
 import 'providers/wallet_provider.dart';
 import 'providers/review_provider.dart';
 import 'providers/subscription_provider.dart';
+import 'providers/dispute_provider.dart';
 import 'screens/auth/welcome_screen.dart';
 import 'screens/main_nav_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('Firebase init failed: $e');
+  }
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -39,6 +46,7 @@ class RentItApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WalletProvider()),
         ChangeNotifierProvider(create: (_) => ReviewProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
+        ChangeNotifierProvider(create: (_) => DisputeProvider()),
       ],
       child: MaterialApp(
         title: 'RentPe',
@@ -66,7 +74,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _checkAuth() async {
     final auth = context.read<AuthProvider>();
-    await auth.init();
+    try {
+      await auth.init();
+    } catch (_) {
+      // Ignore errors — just show welcome screen
+    }
 
     if (!mounted) return;
 

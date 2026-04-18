@@ -1,16 +1,8 @@
-require('dotenv').config();
+try { require('dotenv').config(); } catch (e) { /* no .env file */ }
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
-
-const authRoutes = require('./routes/auth');
-const itemRoutes = require('./routes/items');
-const bookingRoutes = require('./routes/bookings');
-const notificationRoutes = require('./routes/notifications');
-const chatRoutes = require('./routes/chats');
-const walletRoutes = require('./routes/wallet');
-const reviewRoutes = require('./routes/reviews');
-const subscriptionRoutes = require('./routes/subscription');
+// Force bundler to include pg (Sequelize loads it dynamically)
+require('pg');
 
 const app = express();
 
@@ -19,45 +11,84 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// MongoDB connection caching for serverless
-let isConnected = false;
+// Health check — always responds, no dependencies
+app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
+
+// Lazy-load heavy modules only when needed (avoids cold-start crash)
+let dbReady = false;
+let sequelize, routes;
+
+const loadRoutes = () => {
+  if (routes) return routes;
+  const { sequelize: sq } = require('./models');
+  sequelize = sq;
+  routes = {
+    auth: require('./routes/auth'),
+    items: require('./routes/items'),
+    bookings: require('./routes/bookings'),
+    notifications: require('./routes/notifications'),
+    chats: require('./routes/chats'),
+    wallet: require('./routes/wallet'),
+    reviews: require('./routes/reviews'),
+    subscription: require('./routes/subscription'),
+    disputes: require('./routes/disputes'),
+  };
+  return routes;
+};
 
 const connectDB = async () => {
-  if (isConnected) return;
-  const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/rentit';
+  if (dbReady) return;
   try {
-    const db = await mongoose.connect(MONGODB_URI);
-    isConnected = db.connections[0].readyState === 1;
-    console.log('Connected to MongoDB');
+    loadRoutes();
+    await sequelize.authenticate();
+    if (!process.env.VERCEL) {
+      await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
+    }
+    dbReady = true;
+    console.log('Connected to PostgreSQL');
   } catch (err) {
-    console.error('MongoDB connection error:', err);
+    console.error('PostgreSQL connection error:', err.message || err);
     throw err;
   }
 };
 
-// Connect to DB before handling requests
-app.use(async (req, res, next) => {
+// DB diagnostic
+app.get('/api/health/db', async (req, res) => {
   try {
-    await connectDB();
-    next();
+    loadRoutes();
+    await sequelize.authenticate();
+    res.json({ status: 'connected' });
   } catch (err) {
-    res.status(500).json({ error: 'Database connection failed' });
+    res.status(500).json({ status: 'failed', error: err.message });
   }
 });
 
-// Routes
-app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
-app.use('/api/auth', authRoutes);
-app.use('/api/items', itemRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/chats', chatRoutes);
-app.use('/api/wallet', walletRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/subscription', subscriptionRoutes);
+// Connect to DB and mount routes
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    const r = loadRoutes();
+    // Mount routes on first request
+    if (!app._routesMounted) {
+      app.use('/api/auth', r.auth);
+      app.use('/api/items', r.items);
+      app.use('/api/bookings', r.bookings);
+      app.use('/api/notifications', r.notifications);
+      app.use('/api/chats', r.chats);
+      app.use('/api/wallet', r.wallet);
+      app.use('/api/reviews', r.reviews);
+      app.use('/api/subscription', r.subscription);
+      app.use('/api/disputes', r.disputes);
+      app._routesMounted = true;
+    }
+    next();
+  } catch (err) {
+    res.status(500).json({ error: 'Database connection failed', detail: err.message });
+  }
+});
 
-// Local development server
-if (process.env.NODE_ENV !== 'production') {
+// Local development server (skip on Vercel)
+if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);

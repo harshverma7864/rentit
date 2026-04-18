@@ -14,8 +14,8 @@ import '../wallet/wallet_screen.dart';
 import '../notifications/notifications_screen.dart';
 import 'edit_profile_screen.dart';
 import 'address_screen.dart';
-import 'seller_profile_screen.dart';
 import '../subscription/subscription_screen.dart';
+import '../disputes/disputes_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -84,7 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => Center(
                                 child: Text(
-                                  (user.name)[0].toUpperCase(),
+                                  user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
                                   style: const TextStyle(
                                     fontSize: 32,
                                     fontWeight: FontWeight.w700,
@@ -96,7 +96,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           )
                         : Center(
                             child: Text(
-                              (user?.name ?? 'U')[0].toUpperCase(),
+                              (user?.name ?? '').isNotEmpty ? user!.name[0].toUpperCase() : 'U',
                               style: const TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.w700,
@@ -145,6 +145,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ).animate().fadeIn().scale(begin: const Offset(0.9, 0.9)),
             const SizedBox(height: 32),
+
+            // Incomplete profile banner
+            if (user != null && !user.isProfileComplete)
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                ),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.orange.withValues(alpha: 0.15),
+                        Colors.orange.withValues(alpha: 0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.person_add_alt_1_rounded, color: Colors.orange, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Complete your profile',
+                              style: TextStyle(
+                                color: Colors.orange,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Add ${user.incompleteFields.join(', ')}',
+                              style: TextStyle(
+                                color: Colors.orange.shade200,
+                                fontSize: 12,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.orange, size: 16),
+                    ],
+                  ),
+                ),
+              ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1),
 
             // Menu options
             _MenuSection(
@@ -253,6 +315,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
+                _MenuItem(
+                  icon: Icons.gavel_rounded,
+                  label: 'My Disputes',
+                  subtitle: 'View raised disputes',
+                  color: AppTheme.warning,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const DisputesScreen(),
+                    ),
+                  ),
+                ),
+                if (user != null && !user.isSeller)
+                  _MenuItem(
+                    icon: Icons.storefront_rounded,
+                    label: 'Become a Seller',
+                    subtitle: 'Start listing items to sell',
+                    color: AppTheme.success,
+                    onTap: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          backgroundColor: AppTheme.primaryDeep,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          title: const Text('Become a Seller', style: TextStyle(color: AppTheme.textPrimary)),
+                          content: const Text(
+                            'Enable seller mode to list items on the marketplace. You can always list items for rent or sale.',
+                            style: TextStyle(color: AppTheme.textSecondary),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.success,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: const Text('Enable'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        await auth.becomeSeller();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Seller mode enabled!'),
+                              backgroundColor: AppTheme.success,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
                 _MenuItem(
                   icon: Icons.logout_rounded,
                   label: 'Sign Out',

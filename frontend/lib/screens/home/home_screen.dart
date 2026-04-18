@@ -44,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.primaryDark, AppTheme.primaryDeep, Color(0xFF0D1B3A)],
+          colors: [AppTheme.primaryDark, AppTheme.primaryDeep],
         ),
       ),
       child: SafeArea(
@@ -67,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Hey, ${auth.user?.name.split(' ').first ?? 'there'} 👋',
+                              'Hey, ${(auth.user?.name ?? '').isNotEmpty ? auth.user!.name.split(' ').first : 'there'} 👋',
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w700,
@@ -99,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               : null,
                           child: (auth.user?.avatarUrl == null || auth.user!.avatarUrl.isEmpty)
                               ? Text(
-                                  (auth.user?.name ?? 'U')[0].toUpperCase(),
+                                  (auth.user?.name ?? '').isNotEmpty ? auth.user!.name[0].toUpperCase() : 'U',
                                   style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w600,
@@ -178,15 +178,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       children: [
-                        _CategoryChip(icon: '👔', label: 'Clothing', category: 'clothing'),
                         _CategoryChip(icon: '📱', label: 'Electronics', category: 'electronics'),
                         _CategoryChip(icon: '🚗', label: 'Vehicles', category: 'vehicles'),
                         _CategoryChip(icon: '🪑', label: 'Furniture', category: 'furniture'),
+                        _CategoryChip(icon: '👗', label: 'Clothing', category: 'clothing'),
                         _CategoryChip(icon: '⚽', label: 'Sports', category: 'sports'),
                         _CategoryChip(icon: '🔧', label: 'Tools', category: 'tools'),
-                        _CategoryChip(icon: '🎉', label: 'Party', category: 'party'),
                         _CategoryChip(icon: '📚', label: 'Books', category: 'books'),
-                        _CategoryChip(icon: '🎸', label: 'Music', category: 'music'),
+                        _CategoryChip(icon: '🎉', label: 'Party', category: 'party'),
+                        _CategoryChip(icon: '📷', label: 'Cameras', category: 'cameras'),
                         _CategoryChip(icon: '📦', label: 'Other', category: 'other'),
                       ],
                     ),

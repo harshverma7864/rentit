@@ -84,7 +84,7 @@ class ApiService {
         contentType: MediaType('image', 'jpeg'),
       ));
     }
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(const Duration(seconds: 30));
     final response = await http.Response.fromStream(streamed);
     return _handleResponse(response);
   }
@@ -108,7 +108,7 @@ class ApiService {
         contentType: MediaType('image', 'jpeg'),
       ));
     }
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(const Duration(seconds: 30));
     final response = await http.Response.fromStream(streamed);
     return _handleResponse(response);
   }

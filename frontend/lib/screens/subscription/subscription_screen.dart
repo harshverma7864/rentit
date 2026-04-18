@@ -189,7 +189,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 width: double.infinity,
                 child: GlassButton(
                   onPressed: onUpgrade,
-                  child: Text('Upgrade to $name'),
+                  text: 'Upgrade to $name',
                 ),
               ),
           ],

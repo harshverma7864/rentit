@@ -1,20 +1,31 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const transactionSchema = new mongoose.Schema({
-  type: {
-    type: String,
-    enum: ['credit', 'debit', 'refund', 'payment'],
-    required: true,
+const Wallet = sequelize.define('Wallet', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
   },
-  amount: { type: Number, required: true },
-  description: { type: String, default: '' },
-  booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
-}, { timestamps: true });
+  userId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    unique: true,
+  },
+  balance: {
+    type: DataTypes.DOUBLE,
+    defaultValue: 0,
+  },
+}, {
+  tableName: 'wallets',
+  underscored: true,
+  timestamps: true,
+});
 
-const walletSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-  balance: { type: Number, default: 0 },
-  transactions: [transactionSchema],
-}, { timestamps: true });
+Wallet.prototype.toJSON = function () {
+  const values = Object.assign({}, this.get());
+  values._id = values.id;
+  return values;
+};
 
-module.exports = mongoose.model('Wallet', walletSchema);
+module.exports = Wallet;

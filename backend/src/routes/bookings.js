@@ -5,6 +5,7 @@ const {
   createBooking, respondToBooking, completeBooking,
   cancelBooking, getMyBookings, getBookingById, getItemBookings,
   updateDeliveryStatus, negotiatePrice, acceptNegotiation,
+  updateAlterationStatus, updateReturnStatus,
 } = require('../controllers/bookingController');
 
 router.post('/', auth, createBooking);
@@ -16,6 +17,8 @@ router.patch('/:id/cancel', auth, cancelBooking);
 router.patch('/:id/delivery-status', auth, updateDeliveryStatus);
 router.patch('/:id/negotiate', auth, negotiatePrice);
 router.patch('/:id/accept-negotiation', auth, acceptNegotiation);
+router.patch('/:id/alteration-status', auth, updateAlterationStatus);
+router.patch('/:id/return-status', auth, updateReturnStatus);
 router.get('/item/:itemId', auth, getItemBookings);
 
 module.exports = router;

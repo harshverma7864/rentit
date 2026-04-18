@@ -21,7 +21,7 @@ class ReviewModel {
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) {
     return ReviewModel(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       reviewer: json['reviewer'] is Map<String, dynamic>
           ? UserModel.fromJson(json['reviewer'])
           : null,

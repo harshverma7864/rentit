@@ -10,6 +10,7 @@ import '../../widgets/glass_widgets.dart';
 import '../../providers/item_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/user_model.dart';
+import '../../models/item_model.dart';
 
 class CreateItemScreen extends StatefulWidget {
   const CreateItemScreen({super.key});
@@ -31,8 +32,8 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   final _cityCtrl = TextEditingController();
 
   String _category = 'other';
+  String _subcategory = '';
   String _condition = 'good';
-  bool _deliveryAvailable = false;
   int _maxRentalDays = 30;
   int _quantity = 1;
   List<String> _imagePaths = [];
@@ -42,22 +43,23 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   bool _sellerDelivery = false;
   bool _inAppDelivery = false;
 
+  // Dynamic spec values (populated from category schema)
+  final Map<String, dynamic> _specValues = {};
+  final Map<String, TextEditingController> _specTextControllers = {};
+
   // Address
   AddressModel? _selectedAddress;
   double? _lat, _lng;
 
-  final List<Map<String, String>> _categories = [
-    {'id': 'clothing', 'name': 'Clothing & Fashion', 'icon': '👔'},
-    {'id': 'electronics', 'name': 'Electronics', 'icon': '📱'},
-    {'id': 'vehicles', 'name': 'Vehicles', 'icon': '🚗'},
-    {'id': 'furniture', 'name': 'Furniture', 'icon': '🪑'},
-    {'id': 'sports', 'name': 'Sports & Outdoors', 'icon': '⚽'},
-    {'id': 'tools', 'name': 'Tools & Equipment', 'icon': '🔧'},
-    {'id': 'party', 'name': 'Party & Events', 'icon': '🎉'},
-    {'id': 'books', 'name': 'Books & Media', 'icon': '📚'},
-    {'id': 'music', 'name': 'Musical Instruments', 'icon': '🎸'},
-    {'id': 'other', 'name': 'Other', 'icon': '📦'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Fetch category schemas
+    context.read<ItemProvider>().fetchCategorySpecs();
+  }
+
+  CategorySpec? get _currentCategorySpec =>
+      context.read<ItemProvider>().specForCategory(_category);
 
   @override
   void dispose() {
@@ -70,6 +72,9 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     _rulesCtrl.dispose();
     _deliveryFeeCtrl.dispose();
     _cityCtrl.dispose();
+    for (final c in _specTextControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -116,10 +121,35 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     if (_sellerDelivery) deliveryOpts.add('seller_delivery');
     if (_inAppDelivery) deliveryOpts.add('in_app_delivery');
 
+    // Build specs from dynamic fields
+    final spec = _currentCategorySpec;
+    final specs = <String, dynamic>{};
+    if (spec != null) {
+      for (final field in spec.fields) {
+        if (field.type == 'text' || field.type == 'number') {
+          final ctrl = _specTextControllers[field.key];
+          if (ctrl != null && ctrl.text.trim().isNotEmpty) {
+            specs[field.key] = field.type == 'number'
+                ? num.tryParse(ctrl.text.trim()) ?? ctrl.text.trim()
+                : ctrl.text.trim();
+          }
+        } else {
+          final val = _specValues[field.key];
+          if (val != null && val.toString().isNotEmpty) {
+            specs[field.key] = val;
+          }
+        }
+      }
+    }
+
+    // Determine effective category (subcategory for categories that have them)
+    final hasSubcats = spec != null && spec.subcategories.isNotEmpty;
+    final effectiveCategory = hasSubcats && _subcategory.isNotEmpty ? _subcategory : _category;
+
     final data = {
       'title': _titleCtrl.text.trim(),
       'description': _descCtrl.text.trim(),
-      'category': _category,
+      'category': effectiveCategory,
       'pricePerDay': double.tryParse(_pricePerDayCtrl.text) ?? 0,
       'pricePerHour': double.tryParse(_pricePerHourCtrl.text) ?? 0,
       'pricePerWeek': double.tryParse(_pricePerWeekCtrl.text) ?? 0,
@@ -131,6 +161,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
       'deliveryOptions': deliveryOpts,
       'maxRentalDays': _maxRentalDays,
       'quantity': _quantity,
+      'specs': specs,
       'location': {
         'type': 'Point',
         'coordinates': [_lng ?? _selectedAddress?.location?.longitude ?? 0, _lat ?? _selectedAddress?.location?.latitude ?? 0],
@@ -156,6 +187,80 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
+    }
+  }
+
+  /// Dynamically build a form widget for a single spec field.
+  Widget _buildSpecField(SpecField field) {
+    switch (field.type) {
+      case 'select':
+        final selected = _specValues[field.key]?.toString() ?? '';
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(field.label,
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: field.options.map((opt) {
+                final isSelected = selected == opt;
+                return ChoiceChip(
+                  label: Text(opt.isNotEmpty
+                      ? opt[0].toUpperCase() + opt.substring(1)
+                      : opt),
+                  selected: isSelected,
+                  onSelected: (_) =>
+                      setState(() => _specValues[field.key] = opt),
+                  selectedColor: AppTheme.primaryBlue,
+                  labelStyle: TextStyle(
+                      color:
+                          isSelected ? Colors.white : AppTheme.textPrimary),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
+      case 'boolean':
+        final val = _specValues[field.key] == true;
+        return Column(
+          children: [
+            SwitchListTile(
+              title: Text(field.label,
+                  style: const TextStyle(color: AppTheme.textPrimary)),
+              value: val,
+              onChanged: (v) =>
+                  setState(() => _specValues[field.key] = v),
+              activeTrackColor:
+                  AppTheme.primaryBlue.withValues(alpha: 0.5),
+              activeThumbColor: AppTheme.primaryBlue,
+            ),
+            const SizedBox(height: 12),
+          ],
+        );
+      case 'number':
+      case 'text':
+      default:
+        _specTextControllers.putIfAbsent(
+            field.key, () => TextEditingController());
+        return Column(
+          children: [
+            GlassTextField(
+              controller: _specTextControllers[field.key]!,
+              labelText: field.label,
+              hintText: field.label,
+              keyboardType: field.type == 'number'
+                  ? TextInputType.number
+                  : TextInputType.text,
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
     }
   }
 
@@ -280,41 +385,105 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
               const SizedBox(height: 16),
 
               // Category dropdown
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceGlass,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppTheme.accentBlue.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _category,
-                    isExpanded: true,
-                    dropdownColor: AppTheme.cardBg,
-                    style: const TextStyle(color: AppTheme.textPrimary),
-                    icon: const Icon(Icons.expand_more_rounded,
-                        color: AppTheme.accentCyan),
-                    items: _categories
-                        .map((c) => DropdownMenuItem(
-                              value: c['id'],
-                              child: Row(
-                                children: [
-                                  Text(c['icon']!,
-                                      style: const TextStyle(fontSize: 18)),
-                                  const SizedBox(width: 12),
-                                  Text(c['name']!),
-                                ],
-                              ),
-                            ))
-                        .toList(),
-                    onChanged: (v) => setState(() => _category = v!),
-                  ),
-                ),
+              Consumer<ItemProvider>(
+                builder: (context, provider, _) {
+                  final cats = provider.categorySpecs;
+                  if (cats.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceGlass,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppTheme.accentBlue.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: cats.any((c) => c.id == _category) ? _category : cats.last.id,
+                        isExpanded: true,
+                        dropdownColor: AppTheme.cardBg,
+                        style: const TextStyle(color: AppTheme.textPrimary),
+                        icon: const Icon(Icons.expand_more_rounded,
+                            color: AppTheme.accentCyan),
+                        items: cats
+                            .map((c) => DropdownMenuItem(
+                                  value: c.id,
+                                  child: Row(
+                                    children: [
+                                      Text(c.icon,
+                                          style: const TextStyle(fontSize: 18)),
+                                      const SizedBox(width: 12),
+                                      Text(c.name),
+                                    ],
+                                  ),
+                                ))
+                            .toList(),
+                        onChanged: (v) => setState(() {
+                          _category = v!;
+                          _subcategory = '';
+                          _specValues.clear();
+                          for (final c in _specTextControllers.values) {
+                            c.clear();
+                          }
+                        }),
+                      ),
+                    ),
+                  );
+                },
               ).animate().fadeIn(delay: 200.ms),
               const SizedBox(height: 16),
+
+              // Dynamic subcategory + spec fields
+              Consumer<ItemProvider>(
+                builder: (context, provider, _) {
+                  final spec = provider.specForCategory(_category);
+                  if (spec == null) return const SizedBox.shrink();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Subcategories (if any)
+                      if (spec.subcategories.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceGlass,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: AppTheme.accentBlue.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _subcategory.isEmpty ? null : _subcategory,
+                              isExpanded: true,
+                              dropdownColor: AppTheme.cardBg,
+                              style: const TextStyle(color: AppTheme.textPrimary),
+                              hint: Text('Select ${spec.name.toLowerCase()} type',
+                                  style: const TextStyle(color: AppTheme.textHint)),
+                              icon: const Icon(Icons.expand_more_rounded,
+                                  color: AppTheme.accentCyan),
+                              items: spec.subcategories
+                                  .map((s) => DropdownMenuItem(
+                                        value: s.id,
+                                        child: Text(s.name),
+                                      ))
+                                  .toList(),
+                              onChanged: (v) =>
+                                  setState(() => _subcategory = v ?? ''),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      // Dynamic spec fields
+                      ...spec.fields.map((field) => _buildSpecField(field)),
+                    ],
+                  );
+                },
+              ),
 
               // Description
               GlassTextField(

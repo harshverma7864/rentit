@@ -1,21 +1,41 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const messageSchema = new mongoose.Schema({
-  sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  text: { type: String, required: true },
-  readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-}, { timestamps: true });
+const Chat = sequelize.define('Chat', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
+  bookingId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+  },
+  itemId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+  },
+  lastMessage: {
+    type: DataTypes.TEXT,
+    defaultValue: '',
+  },
+  lastMessageAt: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
+  },
+}, {
+  tableName: 'chats',
+  underscored: true,
+  timestamps: true,
+  indexes: [
+    { fields: ['last_message_at'] },
+  ],
+});
 
-const chatSchema = new mongoose.Schema({
-  participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
-  item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
-  messages: [messageSchema],
-  lastMessage: { type: String, default: '' },
-  lastMessageAt: { type: Date, default: Date.now },
-}, { timestamps: true });
+Chat.prototype.toJSON = function () {
+  const values = Object.assign({}, this.get());
+  values._id = values.id;
+  return values;
+};
 
-chatSchema.index({ participants: 1 });
-chatSchema.index({ lastMessageAt: -1 });
-
-module.exports = mongoose.model('Chat', chatSchema);
+module.exports = Chat;

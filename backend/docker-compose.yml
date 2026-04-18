@@ -1,11 +1,15 @@
 services:
-  mongo:
-    image: mongo:7
-    container_name: rentit-mongo
+  postgres:
+    image: postgres:16
+    container_name: rentit-postgres
     ports:
-      - "27017:27017"
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=rentit
+      - POSTGRES_USER=rentit
+      - POSTGRES_PASSWORD=rentit_dev_pass
     volumes:
-      - mongo_data:/data/db
+      - pg_data:/var/lib/postgresql/data
     restart: unless-stopped
 
   api:
@@ -15,11 +19,12 @@ services:
       - "3000:3000"
     environment:
       - PORT=3000
-      - MONGODB_URI=mongodb://mongo:27017/rentit
-      - JWT_SECRET=rentit_dev_secret_key_2024
+      - DATABASE_URL=postgres://rentit:rentit_dev_pass@postgres:5432/rentit
+      - JWT_SECRET=rentit_dev_secret_key_2026
+      - NODE_ENV=development
     depends_on:
-      - mongo
+      - postgres
     restart: unless-stopped
 
 volumes:
-  mongo_data:
+  pg_data:

@@ -11,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../models/booking_model.dart';
 import '../chat/chat_detail_screen.dart';
 import '../wallet/wallet_screen.dart';
+import '../disputes/raise_dispute_screen.dart';
 
 class BookingDetailScreen extends StatefulWidget {
   final String bookingId;
@@ -286,6 +287,26 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           _buildActionButton(
             label: 'Chat', icon: Icons.chat_bubble_outline_rounded, color: AppTheme.accentCyan,
             onTap: () => _openChat(booking, isOwner),
+          ),
+
+        // Raise Dispute button — available after acceptance
+        if (['accepted', 'active', 'completed'].contains(booking.status))
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: _buildActionButton(
+              label: 'Raise Dispute',
+              icon: Icons.gavel_rounded,
+              color: AppTheme.warning,
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => RaiseDisputeScreen(bookingId: booking.id),
+                  ),
+                );
+                if (result == true) _loadBooking();
+              },
+            ),
           ),
 
         const SizedBox(height: 80),

@@ -77,7 +77,9 @@ class _AddressScreenState extends State<AddressScreen> {
         }
         return;
       }
-      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
       _lat = pos.latitude;
       _lng = pos.longitude;
 
@@ -205,16 +207,9 @@ class _AddressScreenState extends State<AddressScreen> {
                   Expanded(
                     child: GlassButton(
                       onPressed: _isDetecting ? null : _detectLocation,
-                      child: _isDetecting
-                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.my_location, size: 18),
-                                SizedBox(width: 8),
-                                Text('Detect Location'),
-                              ],
-                            ),
+                      text: 'Detect Location',
+                    isLoading: _isDetecting,
+                    icon: Icons.my_location,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -234,7 +229,7 @@ class _AddressScreenState extends State<AddressScreen> {
                 width: double.infinity,
                 child: GlassButton(
                   onPressed: _save,
-                  child: Text(widget.editAddress != null ? 'Update Address' : 'Save Address'),
+                  text: widget.editAddress != null ? 'Update Address' : 'Save Address',
                 ),
               ),
             ].animate(interval: 50.ms).fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0),
@@ -284,7 +279,7 @@ class AddressListScreen extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressScreen()));
                     },
-                    child: const Text('Add Address'),
+                    text: 'Add Address',
                   ),
                 ],
               ),

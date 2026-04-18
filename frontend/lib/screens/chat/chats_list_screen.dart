@@ -6,7 +6,6 @@ import '../../theme/app_theme.dart';
 import '../../widgets/glass_widgets.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../models/chat_model.dart';
 import 'chat_detail_screen.dart';
 
 class ChatsListScreen extends StatefulWidget {
@@ -92,6 +91,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 itemCount: provider.chats.length,
                 itemBuilder: (context, index) {
                   final chat = provider.chats[index];
+                  if (chat.participants.isEmpty) return const SizedBox.shrink();
                   final otherUser = chat.participants.firstWhere(
                     (p) => p.id != currentUserId,
                     orElse: () => chat.participants.first,

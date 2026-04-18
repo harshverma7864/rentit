@@ -32,6 +32,7 @@ function uploadToHosting(buffer, filename, mimeType, folder) {
           ...form.getHeaders(),
           'X-Upload-Secret': UPLOAD_SECRET,
         },
+        timeout: 15000, // 15 seconds
       },
       (res) => {
         let data = '';
@@ -53,6 +54,11 @@ function uploadToHosting(buffer, filename, mimeType, folder) {
       },
     );
 
+    req.on('timeout', () => {
+      req.destroy();
+      console.error('[ImageUpload] Request timed out:', { url: UPLOAD_URL, folder });
+      reject(new Error('Image upload timed out'));
+    });
     req.on('error', (err) => {
       console.error('[ImageUpload] Request error:', { url: UPLOAD_URL, folder, error: err.message });
       reject(err);

@@ -1,17 +1,50 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const subscriptionSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-  plan: {
-    type: String,
-    enum: ['free', 'basic', 'premium'],
-    default: 'free',
+const Subscription = sequelize.define('Subscription', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
   },
-  freeListingsRemaining: { type: Number, default: 3 },
-  freeContactViewsRemaining: { type: Number, default: 5 },
-  contactViewsUsed: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  expiresAt: { type: Date },
-  autoRenew: { type: Boolean, default: false },
-}, { timestamps: true });
+  userId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    unique: true,
+  },
+  plan: {
+    type: DataTypes.STRING,
+    defaultValue: 'free',
+    validate: {
+      isIn: [['free', 'basic', 'premium']],
+    },
+  },
+  freeListingsRemaining: {
+    type: DataTypes.INTEGER,
+    defaultValue: 3,
+  },
+  freeContactViewsRemaining: {
+    type: DataTypes.INTEGER,
+    defaultValue: 5,
+  },
+  expiresAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  autoRenew: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+}, {
+  tableName: 'subscriptions',
+  underscored: true,
+  timestamps: true,
+});
 
-module.exports = mongoose.model('Subscription', subscriptionSchema);
+Subscription.prototype.toJSON = function () {
+  const values = Object.assign({}, this.get());
+  values._id = values.id;
+  return values;
+};
+
+module.exports = Subscription;
