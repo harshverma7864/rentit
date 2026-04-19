@@ -31,14 +31,16 @@ class GlassCard extends StatelessWidget {
             child: Container(
               padding: padding ?? const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.surfaceGlass,
+                color: AppTheme.isDark ? AppTheme.surfaceGlass : AppTheme.cardBg,
                 borderRadius: BorderRadius.circular(borderRadius),
                 border: Border.all(
-                  color: AppTheme.accentBlue.withValues(alpha: 0.15),
+                  color: AppTheme.isDark
+                      ? AppTheme.accentBlue.withValues(alpha: 0.15)
+                      : Colors.black.withValues(alpha: 0.06),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
+                    color: Colors.black.withValues(alpha: AppTheme.isDark ? 0.2 : 0.06),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -151,7 +153,7 @@ class GlassTextField extends StatelessWidget {
       maxLines: maxLines,
       validator: validator,
       onChanged: onChanged,
-      style: const TextStyle(color: AppTheme.textPrimary),
+      style: TextStyle(color: AppTheme.textPrimary),
       decoration: InputDecoration(
         hintText: hintText,
         labelText: labelText,

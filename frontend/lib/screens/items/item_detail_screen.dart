@@ -9,6 +9,8 @@ import '../../providers/item_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/review_provider.dart';
+import '../../providers/favorite_provider.dart';
 import '../chat/chat_detail_screen.dart';
 import '../profile/seller_profile_screen.dart';
 
@@ -30,6 +32,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ItemProvider>().fetchItemById(widget.itemId);
+      context.read<ReviewProvider>().fetchItemReviews(widget.itemId);
     });
   }
 
@@ -55,7 +58,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       body: Consumer<ItemProvider>(
         builder: (context, provider, _) {
           if (provider.isLoading || provider.selectedItem == null) {
-            return const Center(
+            return Center(
               child: CircularProgressIndicator(color: AppTheme.accentCyan),
             );
           }
@@ -66,7 +69,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               currentUserId != null && item.owner?.id == currentUserId;
 
           return Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -94,6 +97,29 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               size: 18),
                         ),
                       ),
+                      actions: [
+                        if (!isOwner)
+                          Consumer<FavoriteProvider>(
+                            builder: (context, favProvider, _) {
+                              final isFav = favProvider.isFavorite(item.id);
+                              return IconButton(
+                                onPressed: () => favProvider.toggleFavorite(item.id),
+                                icon: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryDark.withValues(alpha: 0.7),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    isFav ? Icons.favorite : Icons.favorite_border,
+                                    color: isFav ? AppTheme.error : Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
                       flexibleSpace: FlexibleSpaceBar(
                         background: Container(
                           decoration: BoxDecoration(
@@ -228,7 +254,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 Expanded(
                                   child: Text(
                                     item.title,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w700,
                                       color: AppTheme.textPrimary,
@@ -240,7 +266,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   children: [
                                     Text(
                                       '₹${item.pricePerDay.toInt()}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 28,
                                         fontWeight: FontWeight.w800,
                                         color: AppTheme.accentCyan,
@@ -343,7 +369,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                     _PriceRow('Per Hour', '₹${item.pricePerHour.toInt()}'),
                                   if (item.pricePerWeek > 0)
                                     _PriceRow('Per Week', '₹${item.pricePerWeek.toInt()}'),
-                                  const Divider(color: AppTheme.textHint),
+                                  Divider(color: AppTheme.textHint),
                                   _PriceRow('Security Deposit',
                                       '₹${item.securityDeposit.toInt()}',
                                       highlight: true),
@@ -396,7 +422,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                                 ? value[0].toUpperCase() +
                                                     value.substring(1)
                                                 : value,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                                 color: AppTheme.textPrimary,
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w500),
@@ -466,7 +492,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                                 children: [
                                                   Text(
                                                     item.owner!.name,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontSize: 16,
                                                       fontWeight: FontWeight.w600,
                                                       color: AppTheme.textPrimary,
@@ -479,7 +505,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                               if (item.owner!.rating > 0)
                                                 Row(
                                                   children: [
-                                                    const Icon(Icons.star_rounded,
+                                                    Icon(Icons.star_rounded,
                                                         size: 16,
                                                         color: AppTheme.warning),
                                                     const SizedBox(width: 4),
@@ -569,9 +595,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                               );
                                             }
                                           },
-                                          icon: const Icon(Icons.chat_bubble_outline_rounded,
+                                          icon: Icon(Icons.chat_bubble_outline_rounded,
                                               size: 18, color: AppTheme.accentCyan),
-                                          label: const Text('Chat with Owner',
+                                          label: Text('Chat with Owner',
                                               style: TextStyle(color: AppTheme.accentCyan)),
                                           style: OutlinedButton.styleFrom(
                                             side: BorderSide(
@@ -587,6 +613,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               ),
                               ).animate().fadeIn(delay: 500.ms),
                             ],
+
+                            // Reviews section
+                            const SizedBox(height: 24),
+                            _ItemReviewsSection(itemId: item.id, isOwner: isOwner),
 
                             const SizedBox(height: 100),
                           ],
@@ -672,7 +702,7 @@ class _RentBottomSheetState extends State<_RentBottomSheet> {
       builder: (context, child) {
         return Theme(
           data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
+            colorScheme: ColorScheme.dark(
               primary: AppTheme.primaryBlue,
               surface: AppTheme.primaryDeep,
             ),
@@ -700,13 +730,12 @@ class _RentBottomSheetState extends State<_RentBottomSheet> {
       context: context,
       initialTime: TimeOfDay.now(),
       builder: (context, child) {
+        final base = AppTheme.isDark ? ThemeData.dark() : ThemeData.light();
+        final scheme = AppTheme.isDark
+            ? ColorScheme.dark(primary: AppTheme.primaryBlue, surface: AppTheme.primaryDeep)
+            : ColorScheme.light(primary: AppTheme.primaryBlue, surface: AppTheme.primaryDeep);
         return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppTheme.primaryBlue,
-              surface: AppTheme.primaryDeep,
-            ),
-          ),
+          data: base.copyWith(colorScheme: scheme),
           child: child!,
         );
       },
@@ -785,7 +814,7 @@ class _RentBottomSheetState extends State<_RentBottomSheet> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Book This Item',
               style: TextStyle(
                 fontSize: 22,
@@ -842,7 +871,7 @@ class _RentBottomSheetState extends State<_RentBottomSheet> {
                             _scheduledPickup != null
                                 ? DateFormat('hh:mm a').format(_scheduledPickup!)
                                 : 'Tap to set time',
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppTheme.textPrimary,
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
@@ -860,7 +889,7 @@ class _RentBottomSheetState extends State<_RentBottomSheet> {
 
             // Delivery option
             if (item?.deliveryAvailable == true) ...[
-              const Text(
+              Text(
                 'Delivery Option',
                 style: TextStyle(
                   color: AppTheme.textSecondary,
@@ -896,7 +925,7 @@ class _RentBottomSheetState extends State<_RentBottomSheet> {
 
             // Quantity selector
             if ((item?.quantity ?? 1) > 1) ...[
-              const Text(
+              Text(
                 'Quantity',
                 style: TextStyle(
                   color: AppTheme.textSecondary,
@@ -931,7 +960,7 @@ class _RentBottomSheetState extends State<_RentBottomSheet> {
                         ),
                         Text(
                           '$_quantity',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.textPrimary,
@@ -975,7 +1004,7 @@ class _RentBottomSheetState extends State<_RentBottomSheet> {
                   if (_deliveryOption == 'delivery')
                     _PriceRow('Delivery Fee${_quantity > 1 ? ' × $_quantity' : ''}',
                         '₹${((item?.deliveryFee.toInt() ?? 0) * _quantity)}'),
-                  const Divider(color: AppTheme.textHint),
+                  Divider(color: AppTheme.textHint),
                   _PriceRow('Total', '₹${total.toInt()}', highlight: true),
                   _PriceRow('Security Deposit${_quantity > 1 ? ' × $_quantity' : ''}',
                       '₹${((item?.securityDeposit.toInt() ?? 0) * _quantity)}'),
@@ -1031,7 +1060,7 @@ class _DateSelector extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               date,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -1100,7 +1129,7 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.w600,
         color: AppTheme.textPrimary,
@@ -1305,6 +1334,255 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// ---- Item Reviews Section ----
+
+class _ItemReviewsSection extends StatelessWidget {
+  final String itemId;
+  final bool isOwner;
+
+  const _ItemReviewsSection({required this.itemId, required this.isOwner});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ReviewProvider>(
+      builder: (context, reviewProvider, _) {
+        final reviews = reviewProvider.itemReviews;
+        final avg = reviewProvider.avgRating;
+        final total = reviewProvider.totalReviews;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with average
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _SectionTitle(text: 'Reviews'),
+                if (total > 0)
+                  Row(
+                    children: [
+                      Icon(Icons.star_rounded, color: AppTheme.warning, size: 20),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${avg.toStringAsFixed(1)} ($total)',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Write review button (only for non-owners)
+            if (!isOwner)
+              GestureDetector(
+                onTap: () => _showReviewDialog(context),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceGlass,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.isDark
+                          ? AppTheme.accentBlue.withValues(alpha: 0.2)
+                          : Colors.black.withValues(alpha: 0.06),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.rate_review_outlined, size: 18, color: AppTheme.accentCyan),
+                      const SizedBox(width: 8),
+                      Text('Write a Review',
+                          style: TextStyle(color: AppTheme.accentCyan, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ),
+
+            if (!isOwner && reviews.isNotEmpty) const SizedBox(height: 16),
+
+            // Reviews list
+            if (reviews.isEmpty && isOwner)
+              Text('No reviews yet', style: TextStyle(color: AppTheme.textHint, fontSize: 14)),
+
+            ...reviews.take(5).map((review) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppTheme.isDark ? AppTheme.surfaceGlass : AppTheme.cardBg,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppTheme.isDark
+                        ? AppTheme.accentBlue.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.04),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AppTheme.primaryBlue,
+                          backgroundImage: review.reviewer?.avatarUrl != null &&
+                                  review.reviewer!.avatarUrl.isNotEmpty
+                              ? NetworkImage(review.reviewer!.avatarUrl)
+                              : null,
+                          child: (review.reviewer?.avatarUrl == null ||
+                                  review.reviewer!.avatarUrl.isEmpty)
+                              ? Text(
+                                  (review.reviewer?.name ?? '?')[0].toUpperCase(),
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(review.reviewer?.name ?? 'User',
+                                  style: TextStyle(
+                                      color: AppTheme.textPrimary,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14)),
+                              Row(
+                                children: List.generate(5, (i) => Icon(
+                                  i < review.rating ? Icons.star_rounded : Icons.star_border_rounded,
+                                  size: 14,
+                                  color: AppTheme.warning,
+                                )),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (review.createdAt != null)
+                          Text(
+                            _formatDate(review.createdAt!),
+                            style: TextStyle(color: AppTheme.textHint, fontSize: 11),
+                          ),
+                      ],
+                    ),
+                    if (review.comment.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(review.comment,
+                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4)),
+                    ],
+                  ],
+                ),
+              ),
+            )),
+          ],
+        );
+      },
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final diff = DateTime.now().difference(date);
+    if (diff.inDays > 30) return '${date.day}/${date.month}/${date.year}';
+    if (diff.inDays > 0) return '${diff.inDays}d ago';
+    if (diff.inHours > 0) return '${diff.inHours}h ago';
+    return 'Just now';
+  }
+
+  void _showReviewDialog(BuildContext context) {
+    int selectedRating = 0;
+    final commentCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: AppTheme.primaryDeep,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Rate this Item', style: TextStyle(color: AppTheme.textPrimary)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Star selector
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) => GestureDetector(
+                  onTap: () => setDialogState(() => selectedRating = i + 1),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      i < selectedRating ? Icons.star_rounded : Icons.star_border_rounded,
+                      size: 36,
+                      color: AppTheme.warning,
+                    ),
+                  ),
+                )),
+              ),
+              const SizedBox(height: 16),
+              // Optional comment
+              TextField(
+                controller: commentCtrl,
+                maxLines: 3,
+                style: TextStyle(color: AppTheme.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'Add a comment (optional)',
+                  hintStyle: TextStyle(color: AppTheme.textHint),
+                  filled: true,
+                  fillColor: AppTheme.surfaceGlass,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: selectedRating > 0
+                  ? () async {
+                      Navigator.pop(ctx);
+                      final reviewProvider = context.read<ReviewProvider>();
+                      final success = await reviewProvider.createItemReview(
+                        itemId: itemId,
+                        rating: selectedRating,
+                        comment: commentCtrl.text.trim(),
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(success
+                              ? 'Review submitted!'
+                              : reviewProvider.error ?? 'Failed to submit review'),
+                          backgroundColor: success ? AppTheme.success : AppTheme.error,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ));
+                      }
+                    }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Submit'),
+            ),
+          ],
+        ),
       ),
     );
   }

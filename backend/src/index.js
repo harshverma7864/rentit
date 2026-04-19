@@ -32,6 +32,7 @@ const loadRoutes = () => {
     reviews: require('./routes/reviews'),
     subscription: require('./routes/subscription'),
     disputes: require('./routes/disputes'),
+    favorites: require('./routes/favorites'),
   };
   return routes;
 };
@@ -79,6 +80,7 @@ app.use(async (req, res, next) => {
       app.use('/api/reviews', r.reviews);
       app.use('/api/subscription', r.subscription);
       app.use('/api/disputes', r.disputes);
+      app.use('/api/favorites', r.favorites);
       app._routesMounted = true;
     }
     next();

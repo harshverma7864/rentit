@@ -106,7 +106,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         backgroundColor: AppTheme.primaryDeep,
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -119,7 +119,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               child: Consumer<ChatProvider>(
                 builder: (context, provider, _) {
                   if (provider.isLoading && provider.messages.isEmpty) {
-                    return const Center(
+                    return Center(
                       child: CircularProgressIndicator(
                           color: AppTheme.accentCyan),
                     );
@@ -173,7 +173,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   Expanded(
                     child: TextField(
                       controller: _msgController,
-                      style: const TextStyle(color: AppTheme.textPrimary),
+                      style: TextStyle(color: AppTheme.textPrimary),
                       decoration: InputDecoration(
                         hintText: 'Type a message...',
                         contentPadding: const EdgeInsets.symmetric(
@@ -247,7 +247,7 @@ class _MessageBubble extends StatelessWidget {
           children: [
             Text(
               message.text,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 14,
               ),

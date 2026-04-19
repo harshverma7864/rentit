@@ -30,7 +30,7 @@ class _WalletScreenState extends State<WalletScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.primaryDeep,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Add Money',
+        title: Text('Add Money',
             style: TextStyle(color: AppTheme.textPrimary)),
         content: GlassTextField(
           controller: amountCtrl,
@@ -88,7 +88,7 @@ class _WalletScreenState extends State<WalletScreen> {
         backgroundColor: Colors.transparent,
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -98,7 +98,7 @@ class _WalletScreenState extends State<WalletScreen> {
         child: Consumer<WalletProvider>(
           builder: (context, provider, _) {
             if (provider.isLoading && provider.wallet == null) {
-              return const Center(
+              return Center(
                 child: CircularProgressIndicator(color: AppTheme.accentCyan),
               );
             }
@@ -167,7 +167,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 const SizedBox(height: 24),
 
                 // Transaction history
-                const Text(
+                Text(
                   'Transaction History',
                   style: TextStyle(
                     fontSize: 18,
@@ -220,7 +220,7 @@ class _WalletScreenState extends State<WalletScreen> {
                               children: [
                                 Text(
                                   txn.description,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,
                                     color: AppTheme.textPrimary,

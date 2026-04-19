@@ -40,7 +40,7 @@ class _DisputesScreenState extends State<DisputesScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -55,7 +55,7 @@ class _DisputesScreenState extends State<DisputesScreen> {
         body: Consumer<DisputeProvider>(
           builder: (context, provider, _) {
             if (provider.isLoading) {
-              return const Center(
+              return Center(
                 child: CircularProgressIndicator(color: AppTheme.primaryBlue),
               );
             }
@@ -67,7 +67,7 @@ class _DisputesScreenState extends State<DisputesScreen> {
                   children: [
                     Icon(Icons.gavel_rounded, size: 64, color: AppTheme.textHint),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'No disputes yet',
                       style: TextStyle(
                         color: AppTheme.textSecondary,
@@ -107,7 +107,7 @@ class _DisputesScreenState extends State<DisputesScreen> {
               Expanded(
                 child: Text(
                   dispute.reason,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppTheme.textPrimary,
                     fontWeight: FontWeight.w600,
                     fontSize: 15,
@@ -136,7 +136,7 @@ class _DisputesScreenState extends State<DisputesScreen> {
           const SizedBox(height: 8),
           Text(
             dispute.description,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 13,
             ),
@@ -147,20 +147,20 @@ class _DisputesScreenState extends State<DisputesScreen> {
           Row(
             children: [
               if (dispute.againstUser != null) ...[
-                const Text(
+                Text(
                   'Against: ',
                   style: TextStyle(color: AppTheme.textHint, fontSize: 12),
                 ),
                 Text(
                   dispute.againstUser!.name,
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                 ),
               ],
               const Spacer(),
               if (dispute.createdAt != null)
                 Text(
                   _formatDate(dispute.createdAt!),
-                  style: const TextStyle(color: AppTheme.textHint, fontSize: 11),
+                  style: TextStyle(color: AppTheme.textHint, fontSize: 11),
                 ),
             ],
           ),
@@ -174,12 +174,12 @@ class _DisputesScreenState extends State<DisputesScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle, color: AppTheme.success, size: 16),
+                  Icon(Icons.check_circle, color: AppTheme.success, size: 16),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Resolution: ${dispute.resolution}',
-                      style: const TextStyle(color: AppTheme.success, fontSize: 12),
+                      style: TextStyle(color: AppTheme.success, fontSize: 12),
                     ),
                   ),
                 ],

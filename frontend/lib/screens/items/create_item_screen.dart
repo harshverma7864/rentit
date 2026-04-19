@@ -199,7 +199,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(field.label,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textPrimary)),
@@ -232,7 +232,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
           children: [
             SwitchListTile(
               title: Text(field.label,
-                  style: const TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: AppTheme.textPrimary)),
               value: val,
               onChanged: (v) =>
                   setState(() => _specValues[field.key] = v),
@@ -277,7 +277,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
         ),
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -328,7 +328,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                                     _imagePaths.removeAt(idx)),
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
+                                  decoration: BoxDecoration(
                                     color: AppTheme.error,
                                     shape: BoxShape.circle,
                                   ),
@@ -405,8 +405,8 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                         value: cats.any((c) => c.id == _category) ? _category : cats.last.id,
                         isExpanded: true,
                         dropdownColor: AppTheme.cardBg,
-                        style: const TextStyle(color: AppTheme.textPrimary),
-                        icon: const Icon(Icons.expand_more_rounded,
+                        style: TextStyle(color: AppTheme.textPrimary),
+                        icon: Icon(Icons.expand_more_rounded,
                             color: AppTheme.accentCyan),
                         items: cats
                             .map((c) => DropdownMenuItem(
@@ -460,10 +460,10 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                               value: _subcategory.isEmpty ? null : _subcategory,
                               isExpanded: true,
                               dropdownColor: AppTheme.cardBg,
-                              style: const TextStyle(color: AppTheme.textPrimary),
+                              style: TextStyle(color: AppTheme.textPrimary),
                               hint: Text('Select ${spec.name.toLowerCase()} type',
-                                  style: const TextStyle(color: AppTheme.textHint)),
-                              icon: const Icon(Icons.expand_more_rounded,
+                                  style: TextStyle(color: AppTheme.textHint)),
+                              icon: Icon(Icons.expand_more_rounded,
                                   color: AppTheme.accentCyan),
                               items: spec.subcategories
                                   .map((s) => DropdownMenuItem(
@@ -609,7 +609,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                         Icon(Icons.inventory_2_outlined,
                             color: AppTheme.accentCyan),
                         const SizedBox(width: 12),
-                        const Text(
+                        Text(
                           'Available Units',
                           style: TextStyle(color: AppTheme.textPrimary),
                         ),
@@ -629,7 +629,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                         ),
                         Text(
                           '$_quantity',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.textPrimary,
@@ -637,7 +637,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                         ),
                         IconButton(
                           onPressed: () => setState(() => _quantity++),
-                          icon: const Icon(Icons.add_circle_outline,
+                          icon: Icon(Icons.add_circle_outline,
                               color: AppTheme.accentCyan),
                           iconSize: 28,
                         ),
@@ -721,9 +721,9 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
                   onPressed: _detectLocation,
-                  icon: const Icon(Icons.my_location_rounded,
+                  icon: Icon(Icons.my_location_rounded,
                       size: 16, color: AppTheme.accentCyan),
-                  label: const Text('Use current location',
+                  label: Text('Use current location',
                       style: TextStyle(
                           color: AppTheme.accentCyan, fontSize: 13)),
                 ),
@@ -748,23 +748,23 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                     CheckboxListTile(
                       value: _selfPickup,
                       onChanged: (v) => setState(() => _selfPickup = v ?? true),
-                      title: const Text('Self Pickup', style: TextStyle(color: AppTheme.textPrimary)),
+                      title: Text('Self Pickup', style: TextStyle(color: AppTheme.textPrimary)),
                       subtitle: Text('Buyer picks up the item', style: TextStyle(color: AppTheme.textHint, fontSize: 12)),
-                      secondary: const Icon(Icons.directions_walk, color: AppTheme.accentCyan),
+                      secondary: Icon(Icons.directions_walk, color: AppTheme.accentCyan),
                       activeColor: AppTheme.accentCyan,
                     ),
                     CheckboxListTile(
                       value: _sellerDelivery,
                       onChanged: (v) => setState(() => _sellerDelivery = v ?? false),
-                      title: const Text('Seller Delivery', style: TextStyle(color: AppTheme.textPrimary)),
+                      title: Text('Seller Delivery', style: TextStyle(color: AppTheme.textPrimary)),
                       subtitle: Text('You deliver to the buyer', style: TextStyle(color: AppTheme.textHint, fontSize: 12)),
-                      secondary: const Icon(Icons.local_shipping, color: AppTheme.accentCyan),
+                      secondary: Icon(Icons.local_shipping, color: AppTheme.accentCyan),
                       activeColor: AppTheme.accentCyan,
                     ),
                     CheckboxListTile(
                       value: _inAppDelivery,
                       onChanged: (v) => setState(() => _inAppDelivery = v ?? false),
-                      title: const Text('In-App Delivery', style: TextStyle(color: AppTheme.textPrimary)),
+                      title: Text('In-App Delivery', style: TextStyle(color: AppTheme.textPrimary)),
                       subtitle: Text('RentPe handles delivery & damage protection', style: TextStyle(color: Colors.green[300], fontSize: 12)),
                       secondary: const Icon(Icons.verified_user, color: Colors.green),
                       activeColor: AppTheme.accentCyan,

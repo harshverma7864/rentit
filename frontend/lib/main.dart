@@ -12,6 +12,8 @@ import 'providers/wallet_provider.dart';
 import 'providers/review_provider.dart';
 import 'providers/subscription_provider.dart';
 import 'providers/dispute_provider.dart';
+import 'providers/theme_provider.dart';
+import 'providers/favorite_provider.dart';
 import 'screens/auth/welcome_screen.dart';
 import 'screens/main_nav_screen.dart';
 
@@ -38,6 +40,7 @@ class RentItApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ItemProvider()),
         ChangeNotifierProvider(create: (_) => BookingProvider()),
@@ -47,12 +50,23 @@ class RentItApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ReviewProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
         ChangeNotifierProvider(create: (_) => DisputeProvider()),
+        ChangeNotifierProvider(create: (_) => FavoriteProvider()),
       ],
-      child: MaterialApp(
-        title: 'RentPe',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme,
-        home: const SplashScreen(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          SystemChrome.setSystemUIOverlayStyle(
+            SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: themeProvider.isDark ? Brightness.light : Brightness.dark,
+            ),
+          );
+          return MaterialApp(
+            title: 'RentPe',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.currentTheme,
+            home: const SplashScreen(),
+          );
+        },
       ),
     );
   }
@@ -83,6 +97,10 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     if (auth.isLoggedIn) {
+      // Pre-fetch favorites
+      if (mounted) {
+        context.read<FavoriteProvider>().fetchFavorites();
+      }
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const MainNavScreen()),
@@ -138,7 +156,7 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            const CircularProgressIndicator(
+            CircularProgressIndicator(
               color: AppTheme.accentCyan,
               strokeWidth: 2,
             ),

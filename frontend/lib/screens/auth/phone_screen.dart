@@ -37,7 +37,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -92,7 +92,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
                           child: DropdownButton<String>(
                             value: _countryCode,
                             dropdownColor: AppTheme.primaryDeep,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppTheme.textPrimary,
                               fontSize: 16,
                             ),

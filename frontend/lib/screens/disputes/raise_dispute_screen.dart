@@ -72,7 +72,7 @@ class _RaiseDisputeScreenState extends State<RaiseDisputeScreen> {
     if (mounted) {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Dispute raised successfully'),
             backgroundColor: AppTheme.success,
           ),
@@ -92,7 +92,7 @@ class _RaiseDisputeScreenState extends State<RaiseDisputeScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -111,7 +111,7 @@ class _RaiseDisputeScreenState extends State<RaiseDisputeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'What went wrong?',
                       style: TextStyle(
                         color: AppTheme.textPrimary,
@@ -120,7 +120,7 @@ class _RaiseDisputeScreenState extends State<RaiseDisputeScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Select a reason for your dispute. Our team will review it manually.',
                       style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
                     ),
@@ -154,7 +154,7 @@ class _RaiseDisputeScreenState extends State<RaiseDisputeScreen> {
                     TextFormField(
                       controller: _descriptionController,
                       maxLines: 5,
-                      style: const TextStyle(color: AppTheme.textPrimary),
+                      style: TextStyle(color: AppTheme.textPrimary),
                       decoration: const InputDecoration(
                         labelText: 'Description',
                         hintText: 'Explain the issue in detail...',
@@ -168,7 +168,7 @@ class _RaiseDisputeScreenState extends State<RaiseDisputeScreen> {
                     const SizedBox(height: 20),
 
                     // Images
-                    const Text(
+                    Text(
                       'Evidence (optional)',
                       style: TextStyle(
                         color: AppTheme.textPrimary,
@@ -199,7 +199,7 @@ class _RaiseDisputeScreenState extends State<RaiseDisputeScreen> {
                                     onTap: () => setState(() => _imagePaths.remove(path)),
                                     child: Container(
                                       margin: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
+                                      decoration: BoxDecoration(
                                         color: AppTheme.error,
                                         shape: BoxShape.circle,
                                       ),
@@ -219,7 +219,7 @@ class _RaiseDisputeScreenState extends State<RaiseDisputeScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: AppTheme.surfaceGlassLight),
                                 ),
-                                child: const Column(
+                                child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(Icons.add_photo_alternate, color: AppTheme.textSecondary),
@@ -239,7 +239,7 @@ class _RaiseDisputeScreenState extends State<RaiseDisputeScreen> {
                       padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
-                          const Icon(Icons.info_outline, color: AppTheme.warning, size: 20),
+                          Icon(Icons.info_outline, color: AppTheme.warning, size: 20),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(

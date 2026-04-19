@@ -48,7 +48,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
       floatingActionButton: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             colors: [AppTheme.primaryBlue, AppTheme.accentCyan],
           ),
           boxShadow: [
@@ -192,7 +192,7 @@ class _NavItem extends StatelessWidget {
                 margin: const EdgeInsets.only(top: 4),
                 width: 4,
                 height: 4,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppTheme.accentCyan,
                   shape: BoxShape.circle,
                 ),

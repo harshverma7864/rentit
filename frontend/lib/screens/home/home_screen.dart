@@ -5,9 +5,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/item_provider.dart';
+import '../../providers/favorite_provider.dart';
 import '../../models/item_model.dart';
 import '../items/item_detail_screen.dart';
 import '../items/browse_screen.dart';
+import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final auth = context.watch<AuthProvider>();
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -68,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(
                               'Hey, ${(auth.user?.name ?? '').isNotEmpty ? auth.user!.name.split(' ').first : 'there'} 👋',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w700,
                                 color: AppTheme.textPrimary,
@@ -91,22 +93,26 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ],
                         ).animate().fadeIn().slideX(begin: -0.1),
-                        CircleAvatar(
-                          radius: 24,
-                          backgroundColor: AppTheme.primaryBlue,
-                          backgroundImage: auth.user?.avatarUrl != null && auth.user!.avatarUrl.isNotEmpty
-                              ? NetworkImage(auth.user!.avatarUrl)
-                              : null,
-                          child: (auth.user?.avatarUrl == null || auth.user!.avatarUrl.isEmpty)
-                              ? Text(
-                                  (auth.user?.name ?? '').isNotEmpty ? auth.user!.name[0].toUpperCase() : 'U',
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : null,
+                        GestureDetector(
+                          onTap: () => Navigator.push(context,
+                            MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                          child: CircleAvatar(
+                            radius: 24,
+                            backgroundColor: AppTheme.primaryBlue,
+                            backgroundImage: auth.user?.avatarUrl != null && auth.user!.avatarUrl.isNotEmpty
+                                ? NetworkImage(auth.user!.avatarUrl)
+                                : null,
+                            child: (auth.user?.avatarUrl == null || auth.user!.avatarUrl.isEmpty)
+                                ? Text(
+                                    (auth.user?.name ?? '').isNotEmpty ? auth.user!.name[0].toUpperCase() : 'U',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : null,
+                          ),
                         ).animate().fadeIn().scale(begin: const Offset(0.8, 0.8)),
                       ],
                     ),
@@ -207,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: const Text(
+                        child: Text(
                           'Recommended For You',
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                         ),
@@ -275,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textPrimary, fontSize: 13)),
+                                              style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textPrimary, fontSize: 13)),
                                           Text('₹${item.pricePerDay.toInt()}/day',
                                               style: TextStyle(color: AppTheme.accentCyan, fontSize: 12)),
                                         ],
@@ -302,7 +308,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Available Near You',
                       style: TextStyle(
                         fontSize: 18,
@@ -329,7 +335,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Consumer<ItemProvider>(
               builder: (context, itemProvider, _) {
                 if (itemProvider.isLoading && itemProvider.items.isEmpty) {
-                  return const SliverToBoxAdapter(
+                  return SliverToBoxAdapter(
                     child: Center(
                       child: Padding(
                         padding: EdgeInsets.all(40),
@@ -485,7 +491,7 @@ class _ItemCard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
+              color: Colors.black.withValues(alpha: AppTheme.isDark ? 0.2 : 0.06),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -545,7 +551,7 @@ class _ItemCard extends StatelessWidget {
                   ),
                 if (!item.hasInAppDelivery)
                   Positioned(
-                    top: 8, right: 8,
+                    top: 8, right: 36,
                     child: Tooltip(
                       message: 'No in-app delivery protection',
                       child: Container(
@@ -558,6 +564,29 @@ class _ItemCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                Positioned(
+                  top: 6, right: 6,
+                  child: Consumer<FavoriteProvider>(
+                    builder: (context, favProvider, _) {
+                      final isFav = favProvider.isFavorite(item.id);
+                      return GestureDetector(
+                        onTap: () => favProvider.toggleFavorite(item.id),
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: Colors.black38,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isFav ? Icons.favorite : Icons.favorite_border,
+                            color: isFav ? AppTheme.error : Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
             Padding(
@@ -569,7 +598,7 @@ class _ItemCard extends StatelessWidget {
                     item.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.textPrimary,

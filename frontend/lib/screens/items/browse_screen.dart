@@ -174,7 +174,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
     return Scaffold(
       backgroundColor: AppTheme.primaryDark,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -201,14 +201,14 @@ class _BrowseScreenState extends State<BrowseScreen> {
                           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                           child: TextField(
                             controller: _searchController,
-                            style: const TextStyle(color: AppTheme.textPrimary),
+                            style: TextStyle(color: AppTheme.textPrimary),
                             decoration: InputDecoration(
                               hintText: 'Search items...',
-                              prefixIcon: const Icon(Icons.search_rounded,
+                              prefixIcon: Icon(Icons.search_rounded,
                                   color: AppTheme.accentCyan),
                               suffixIcon: _searchController.text.isNotEmpty
                                   ? IconButton(
-                                      icon: const Icon(Icons.clear,
+                                      icon: Icon(Icons.clear,
                                           color: AppTheme.textHint),
                                       onPressed: () {
                                         _searchController.clear();
@@ -224,7 +224,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                     ),
                     const SizedBox(width: 8),
                     PopupMenuButton<String>(
-                      icon: const Icon(Icons.sort_rounded,
+                      icon: Icon(Icons.sort_rounded,
                           color: AppTheme.accentCyan),
                       color: AppTheme.cardBg,
                       onSelected: (value) {
@@ -378,7 +378,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                                   children: [
                                     if (_locationLoading &&
                                         option['value'] == _selectedRadius)
-                                      const Padding(
+                                      Padding(
                                         padding: EdgeInsets.only(right: 6),
                                         child: SizedBox(
                                           width: 12,
@@ -489,7 +489,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(field.label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+                                  Text(field.label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
                                   const SizedBox(height: 6),
                                   Wrap(
                                     spacing: 6,
@@ -527,7 +527,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                                   setState(() => _specFilters.clear());
                                   _search();
                                 },
-                                child: const Text('Clear All Filters', style: TextStyle(color: AppTheme.accentCyan, fontSize: 13)),
+                                child: Text('Clear All Filters', style: TextStyle(color: AppTheme.accentCyan, fontSize: 13)),
                               ),
                             ),
                         ],
@@ -541,7 +541,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                 child: Consumer<ItemProvider>(
                   builder: (context, provider, _) {
                     if (provider.isLoading && provider.items.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: CircularProgressIndicator(
                           color: AppTheme.accentCyan,
                         ),
@@ -675,7 +675,7 @@ class _BrowseItemCard extends StatelessWidget {
                       ),
                       child: Text(
                         item.conditionLabel,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
                           color: AppTheme.accentCyan,
                           fontWeight: FontWeight.w500,
@@ -695,7 +695,7 @@ class _BrowseItemCard extends StatelessWidget {
                     item.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.textPrimary,

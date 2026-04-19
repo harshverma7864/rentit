@@ -48,9 +48,9 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         backgroundColor: Colors.transparent,
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accentCyan))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accentCyan))
           : _booking == null
-              ? const Center(child: Text('Booking not found', style: TextStyle(color: AppTheme.textSecondary)))
+              ? Center(child: Text('Booking not found', style: TextStyle(color: AppTheme.textSecondary)))
               : RefreshIndicator(
                   color: AppTheme.accentCyan,
                   onRefresh: _loadBooking,
@@ -101,12 +101,12 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   children: [
                     Text(
                       booking.item?.title ?? 'Item',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       isOwner ? 'Renter: ${booking.renter?.name ?? ''}' : 'Owner: ${booking.owner?.name ?? ''}',
-                      style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
                     ),
                   ],
                 ),
@@ -123,17 +123,17 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             children: [
               _InfoRow(icon: Icons.calendar_today_rounded, label: 'Period',
                   value: '${fmt.format(booking.startDate)} - ${fmt.format(booking.endDate)}'),
-              const Divider(color: AppTheme.textHint, height: 20),
+              Divider(color: AppTheme.textHint, height: 20),
               _InfoRow(icon: Icons.attach_money_rounded, label: 'Rental Price',
                   value: '₹${booking.totalPrice.toInt()}'),
               _InfoRow(icon: Icons.shield_outlined, label: 'Security Deposit',
                   value: '₹${booking.securityDeposit.toInt()}'),
               if (booking.finalPrice != null) ...[
-                const Divider(color: AppTheme.textHint, height: 20),
+                Divider(color: AppTheme.textHint, height: 20),
                 _InfoRow(icon: Icons.handshake_rounded, label: 'Negotiated Price',
                     value: '₹${booking.finalPrice!.toInt()}', valueColor: AppTheme.success),
               ],
-              const Divider(color: AppTheme.textHint, height: 20),
+              Divider(color: AppTheme.textHint, height: 20),
               _InfoRow(icon: Icons.payment_rounded, label: 'Total Payable',
                   value: '₹${((booking.finalPrice ?? booking.totalPrice) + booking.securityDeposit).toInt()}',
                   valueColor: AppTheme.accentCyan),
@@ -159,7 +159,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Delivery Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                Text('Delivery Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
                 const SizedBox(height: 8),
                 Row(children: [
                   Icon(
@@ -209,14 +209,14 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         if (booking.renterNote.isNotEmpty || booking.ownerNote.isNotEmpty)
           GlassCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Notes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+              Text('Notes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
               if (booking.renterNote.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text('Renter: ${booking.renterNote}', style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                Text('Renter: ${booking.renterNote}', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
               ],
               if (booking.ownerNote.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text('Owner: ${booking.ownerNote}', style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                Text('Owner: ${booking.ownerNote}', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
               ],
             ]),
           ).animate().fadeIn(delay: 200.ms),
@@ -322,10 +322,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           Row(children: [
             Icon(Icons.handshake_rounded, size: 20, color: AppTheme.accentCyan),
             const SizedBox(width: 8),
-            const Text('Negotiate Price', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+            Text('Negotiate Price', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
           ]),
           const SizedBox(height: 8),
-          Text('Current price: ₹${booking.totalPrice.toInt()}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+          Text('Current price: ₹${booking.totalPrice.toInt()}', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
           if (booking.proposedPrice != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -411,11 +411,11 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.primaryDeep,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Propose Price', style: TextStyle(color: AppTheme.textPrimary)),
+        title: Text('Propose Price', style: TextStyle(color: AppTheme.textPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Current: ₹${booking.totalPrice.toInt()}', style: const TextStyle(color: AppTheme.textSecondary)),
+            Text('Current: ₹${booking.totalPrice.toInt()}', style: TextStyle(color: AppTheme.textSecondary)),
             const SizedBox(height: 12),
             GlassTextField(
               controller: priceCtrl,
@@ -466,7 +466,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.primaryDeep,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Accept Request', style: TextStyle(color: AppTheme.textPrimary)),
+        title: Text('Accept Request', style: TextStyle(color: AppTheme.textPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -537,12 +537,12 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.primaryDeep,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Confirm Payment', style: TextStyle(color: AppTheme.textPrimary)),
+        title: Text('Confirm Payment', style: TextStyle(color: AppTheme.textPrimary)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Rental: ₹${(booking.finalPrice ?? booking.totalPrice).toInt()}', style: const TextStyle(color: AppTheme.textSecondary)),
-          Text('Security Deposit: ₹${booking.securityDeposit.toInt()}', style: const TextStyle(color: AppTheme.textSecondary)),
-          const Divider(color: AppTheme.textHint),
-          Text('Total: ₹${totalAmount.toInt()}', style: const TextStyle(color: AppTheme.accentCyan, fontSize: 18, fontWeight: FontWeight.w700)),
+          Text('Rental: ₹${(booking.finalPrice ?? booking.totalPrice).toInt()}', style: TextStyle(color: AppTheme.textSecondary)),
+          Text('Security Deposit: ₹${booking.securityDeposit.toInt()}', style: TextStyle(color: AppTheme.textSecondary)),
+          Divider(color: AppTheme.textHint),
+          Text('Total: ₹${totalAmount.toInt()}', style: TextStyle(color: AppTheme.accentCyan, fontSize: 18, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           Text('Security deposit is held in escrow and returned on completion.', style: TextStyle(fontSize: 11, color: AppTheme.textHint, fontStyle: FontStyle.italic), textAlign: TextAlign.center),
         ]),
@@ -620,7 +620,7 @@ class _InfoRow extends StatelessWidget {
       child: Row(children: [
         Icon(icon, size: 16, color: AppTheme.textHint),
         const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+        Text(label, style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
         const Spacer(),
         Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: valueColor ?? AppTheme.textPrimary)),
       ]),

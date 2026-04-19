@@ -59,7 +59,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -75,7 +75,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Notifications',
                     style: TextStyle(
                       fontSize: 24,
@@ -99,7 +99,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               child: Consumer<NotificationProvider>(
                 builder: (context, provider, _) {
                   if (provider.isLoading && provider.notifications.isEmpty) {
-                    return const Center(
+                    return Center(
                       child:
                           CircularProgressIndicator(color: AppTheme.accentCyan),
                     );
@@ -194,7 +194,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 Container(
                                   width: 8,
                                   height: 8,
-                                  decoration: const BoxDecoration(
+                                  decoration: BoxDecoration(
                                     color: AppTheme.accentCyan,
                                     shape: BoxShape.circle,
                                   ),

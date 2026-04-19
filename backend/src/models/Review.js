@@ -17,7 +17,11 @@ const Review = sequelize.define('Review', {
   },
   bookingId: {
     type: DataTypes.UUID,
-    allowNull: false,
+    allowNull: true,
+  },
+  itemId: {
+    type: DataTypes.UUID,
+    allowNull: true,
   },
   rating: {
     type: DataTypes.INTEGER,
@@ -35,6 +39,7 @@ const Review = sequelize.define('Review', {
   indexes: [
     { fields: ['reviewee_id', 'created_at'] },
     { fields: ['booking_id', 'reviewer_id'], unique: true },
+    { fields: ['item_id', 'created_at'] },
   ],
 });
 

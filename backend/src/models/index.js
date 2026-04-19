@@ -15,6 +15,7 @@ const ContactView = require('./ContactView');
 const Wallet = require('./Wallet');
 const WalletTransaction = require('./WalletTransaction');
 const Dispute = require('./Dispute');
+const Favorite = require('./Favorite');
 
 // ---- User associations ----
 User.hasMany(Address, { foreignKey: 'userId', as: 'addresses', onDelete: 'CASCADE' });
@@ -59,6 +60,8 @@ User.belongsToMany(Chat, { through: ChatParticipant, foreignKey: 'userId', other
 Review.belongsTo(User, { foreignKey: 'reviewerId', as: 'reviewer' });
 Review.belongsTo(User, { foreignKey: 'revieweeId', as: 'reviewee' });
 Review.belongsTo(Booking, { foreignKey: 'bookingId', as: 'booking' });
+Review.belongsTo(Item, { foreignKey: 'itemId', as: 'item' });
+Item.hasMany(Review, { foreignKey: 'itemId', as: 'reviews' });
 
 // ---- Subscription / ContactView ----
 Subscription.hasMany(ContactView, { foreignKey: 'subscriptionId', as: 'contactViews', onDelete: 'CASCADE' });
@@ -78,6 +81,12 @@ Dispute.belongsTo(User, { foreignKey: 'againstUserId', as: 'againstUser' });
 // ---- Notification ----
 Notification.belongsTo(User, { foreignKey: 'userId' });
 
+// ---- Favorite associations ----
+User.hasMany(Favorite, { foreignKey: 'userId', as: 'favorites', onDelete: 'CASCADE' });
+Favorite.belongsTo(User, { foreignKey: 'userId' });
+Favorite.belongsTo(Item, { foreignKey: 'itemId', as: 'item' });
+Item.hasMany(Favorite, { foreignKey: 'itemId', as: 'favorites', onDelete: 'CASCADE' });
+
 module.exports = {
   sequelize,
   User,
@@ -95,4 +104,5 @@ module.exports = {
   Wallet,
   WalletTransaction,
   Dispute,
+  Favorite,
 };

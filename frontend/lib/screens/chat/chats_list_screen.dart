@@ -30,7 +30,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     final currentUserId = context.read<AuthProvider>().user?.id ?? '';
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -43,7 +43,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: const Text(
+              child: Text(
                 'Messages',
                 style: TextStyle(
                   fontSize: 24,
@@ -57,7 +57,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               child: Consumer<ChatProvider>(
           builder: (context, provider, _) {
             if (provider.isLoading && provider.chats.isEmpty) {
-              return const Center(
+              return Center(
                 child: CircularProgressIndicator(color: AppTheme.accentCyan),
               );
             }
@@ -137,7 +137,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                             children: [
                               Text(
                                 otherUser.name,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                   color: AppTheme.textPrimary,

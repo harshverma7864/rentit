@@ -5,6 +5,7 @@ class ReviewModel {
   final UserModel? reviewer;
   final String revieweeId;
   final String bookingId;
+  final String itemId;
   final int rating;
   final String comment;
   final DateTime? createdAt;
@@ -14,6 +15,7 @@ class ReviewModel {
     this.reviewer,
     this.revieweeId = '',
     this.bookingId = '',
+    this.itemId = '',
     required this.rating,
     this.comment = '',
     this.createdAt,
@@ -25,8 +27,9 @@ class ReviewModel {
       reviewer: json['reviewer'] is Map<String, dynamic>
           ? UserModel.fromJson(json['reviewer'])
           : null,
-      revieweeId: json['reviewee'] is String ? json['reviewee'] : '',
-      bookingId: json['booking'] is String ? json['booking'] : '',
+      revieweeId: json['revieweeId'] is String ? json['revieweeId'] : '',
+      bookingId: json['bookingId'] is String ? json['bookingId'] : '',
+      itemId: json['itemId'] is String ? json['itemId'] : '',
       rating: json['rating'] ?? 0,
       comment: json['comment'] ?? '',
       createdAt: json['createdAt'] != null

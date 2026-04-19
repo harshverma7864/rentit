@@ -13,7 +13,7 @@ class WelcomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -66,13 +66,13 @@ class WelcomeScreen extends StatelessWidget {
                     fontSize: 42,
                     fontWeight: FontWeight.w800,
                     foreground: Paint()
-                      ..shader = const LinearGradient(
+                      ..shader = LinearGradient(
                         colors: [AppTheme.textPrimary, AppTheme.accentCyan],
                       ).createShader(const Rect.fromLTWH(0, 0, 200, 70)),
                   ),
                 ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.3),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Rent. Use. Return.',
                   style: TextStyle(
                     fontSize: 16,
@@ -82,7 +82,7 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ).animate().fadeIn(delay: 450.ms),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Rent anything you need,\nanytime, anywhere.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -128,8 +128,8 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.phone_rounded, size: 18, color: AppTheme.textSecondary),
-                  label: const Text(
+                  icon: Icon(Icons.phone_rounded, size: 18, color: AppTheme.textSecondary),
+                  label: Text(
                     'Sign in with OTP',
                     style: TextStyle(
                       color: AppTheme.textSecondary,

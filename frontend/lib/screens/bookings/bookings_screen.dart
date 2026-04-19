@@ -42,7 +42,7 @@ class _BookingsScreenState extends State<BookingsScreen>
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -56,7 +56,7 @@ class _BookingsScreenState extends State<BookingsScreen>
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
                 children: [
-                  const Text(
+                  Text(
                     'Bookings',
                     style: TextStyle(
                       fontSize: 24,
@@ -150,7 +150,7 @@ class _RentalsList extends StatelessWidget {
     return Consumer<BookingProvider>(
       builder: (context, provider, _) {
         if (provider.isLoading && provider.myRentals.isEmpty) {
-          return const Center(
+          return Center(
             child: CircularProgressIndicator(color: AppTheme.accentCyan),
           );
         }
@@ -199,7 +199,7 @@ class _RequestsList extends StatelessWidget {
     return Consumer<BookingProvider>(
       builder: (context, provider, _) {
         if (provider.isLoading && provider.myListingBookings.isEmpty) {
-          return const Center(
+          return Center(
             child: CircularProgressIndicator(color: AppTheme.accentCyan),
           );
         }
@@ -305,7 +305,7 @@ class _BookingCard extends StatelessWidget {
                       booking.item?.title ?? 'Item',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.textPrimary,
@@ -583,7 +583,7 @@ class _BookingCard extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.primaryDeep,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Accept Request',
+        title: Text('Accept Request',
             style: TextStyle(color: AppTheme.textPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -675,23 +675,23 @@ class _BookingCard extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.primaryDeep,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Confirm Payment',
+        title: Text('Confirm Payment',
             style: TextStyle(color: AppTheme.textPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Total: ₹${booking.totalPrice.toInt()}',
-              style: const TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: AppTheme.textSecondary),
             ),
             Text(
               'Security Deposit: ₹${booking.securityDeposit.toInt()}',
-              style: const TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: AppTheme.textSecondary),
             ),
-            const Divider(color: AppTheme.textHint),
+            Divider(color: AppTheme.textHint),
             Text(
               'Amount: ₹${totalAmount.toInt()}',
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.accentCyan,
                 fontSize: 18,
                 fontWeight: FontWeight.w700,

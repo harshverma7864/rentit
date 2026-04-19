@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/glass_widgets.dart';
 import '../../providers/item_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../items/create_item_screen.dart';
 import '../auth/welcome_screen.dart';
 import '../chat/chats_list_screen.dart';
@@ -16,6 +17,7 @@ import 'edit_profile_screen.dart';
 import 'address_screen.dart';
 import '../subscription/subscription_screen.dart';
 import '../disputes/disputes_screen.dart';
+import 'favorites_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -39,7 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = auth.user;
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -108,7 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 16),
                   Text(
                     user?.name ?? 'User',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary,
@@ -250,6 +252,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 _MenuItem(
+                  icon: Icons.favorite_outline_rounded,
+                  label: 'My Favorites',
+                  subtitle: 'Items you liked',
+                  color: AppTheme.error,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FavoritesScreen(),
+                    ),
+                  ),
+                ),
+                Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, _) => _MenuItem(
+                    icon: themeProvider.isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                    label: themeProvider.isDark ? 'Light Mode' : 'Dark Mode',
+                    subtitle: 'Switch appearance',
+                    color: AppTheme.primaryLight,
+                    onTap: () => themeProvider.toggle(),
+                  ),
+                ),
+                _MenuItem(
                   icon: Icons.account_balance_wallet_outlined,
                   label: 'Wallet',
                   subtitle: 'Add money, view transactions',
@@ -339,8 +362,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         builder: (ctx) => AlertDialog(
                           backgroundColor: AppTheme.primaryDeep,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          title: const Text('Become a Seller', style: TextStyle(color: AppTheme.textPrimary)),
-                          content: const Text(
+                          title: Text('Become a Seller', style: TextStyle(color: AppTheme.textPrimary)),
+                          content: Text(
                             'Enable seller mode to list items on the marketplace. You can always list items for rent or sale.',
                             style: TextStyle(color: AppTheme.textSecondary),
                           ),
@@ -364,7 +387,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         await auth.becomeSeller();
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text('Seller mode enabled!'),
                               backgroundColor: AppTheme.success,
                             ),
@@ -427,7 +450,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'My Listings',
                 style: TextStyle(
                   fontSize: 20,
@@ -478,7 +501,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     children: [
                                       Text(
                                         item.title,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           color: AppTheme.textPrimary,
                                         ),
@@ -529,7 +552,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   onPressed: () => _showBoostDialog(context, item.id, item.title),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline,
+                                  icon: Icon(Icons.delete_outline,
                                       color: AppTheme.error, size: 20),
                                   onPressed: () {
                                     context
@@ -557,7 +580,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (dialogCtx) => AlertDialog(
         backgroundColor: AppTheme.primaryDeep,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Boost Item', style: TextStyle(color: AppTheme.textPrimary)),
+        title: Text('Boost Item', style: TextStyle(color: AppTheme.textPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -617,7 +640,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: AppTheme.primaryDeep,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Update Location',
+          title: Text('Update Location',
               style: TextStyle(color: AppTheme.textPrimary)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -675,7 +698,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           setDialogState(() => isDetecting = false);
                         },
                   icon: isDetecting
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
@@ -683,11 +706,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             color: AppTheme.accentCyan,
                           ),
                         )
-                      : const Icon(Icons.my_location_rounded,
+                      : Icon(Icons.my_location_rounded,
                           color: AppTheme.accentCyan),
                   label: Text(
                     isDetecting ? 'Detecting...' : 'Use GPS Location',
-                    style: const TextStyle(color: AppTheme.accentCyan),
+                    style: TextStyle(color: AppTheme.accentCyan),
                   ),
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(
@@ -801,7 +824,7 @@ class _MenuItem extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                       color: AppTheme.textPrimary,
@@ -853,7 +876,7 @@ class _BoostTile extends StatelessWidget {
               children: [
                 const Icon(Icons.rocket_launch, color: Colors.amber, size: 18),
                 const SizedBox(width: 8),
-                Text(label, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                Text(label, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
               ],
             ),
             Text(price, style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),

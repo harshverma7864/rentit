@@ -91,7 +91,7 @@ class _OtpScreenState extends State<OtpScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -138,7 +138,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 ).animate().fadeIn(delay: 300.ms),
                 const SizedBox(height: 48),
                 if (_isSending)
-                  const Center(
+                  Center(
                     child: Column(
                       children: [
                         CircularProgressIndicator(color: AppTheme.accentCyan),
@@ -157,7 +157,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     controller: _otpController,
                     keyboardType: TextInputType.number,
                     animationType: AnimationType.fade,
-                    textStyle: const TextStyle(
+                    textStyle: TextStyle(
                       color: AppTheme.textPrimary,
                       fontSize: 24,
                       fontWeight: FontWeight.w600,
@@ -209,12 +209,12 @@ class _OtpScreenState extends State<OtpScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline, color: AppTheme.error, size: 20),
+                        Icon(Icons.error_outline, color: AppTheme.error, size: 20),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _error!,
-                            style: const TextStyle(color: AppTheme.error, fontSize: 14),
+                            style: TextStyle(color: AppTheme.error, fontSize: 14),
                           ),
                         ),
                       ],
