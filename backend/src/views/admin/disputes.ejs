@@ -1,0 +1,80 @@
+<% var page = 'disputes'; var title = 'Disputes'; %>
+<%- include('partials/head') %>
+
+<div class="page-header"><h1>Dispute Management</h1></div>
+
+<div class="filter-tabs">
+  <a href="/admin/disputes?status=open" class="<%= status === 'open' ? 'active' : '' %>">Open</a>
+  <a href="/admin/disputes?status=under_review" class="<%= status === 'under_review' ? 'active' : '' %>">Under Review</a>
+  <a href="/admin/disputes?status=resolved" class="<%= status === 'resolved' ? 'active' : '' %>">Resolved</a>
+  <a href="/admin/disputes?status=dismissed" class="<%= status === 'dismissed' ? 'active' : '' %>">Dismissed</a>
+</div>
+
+<% if (disputes.length === 0) { %>
+  <div class="empty-state">No disputes found.</div>
+<% } else { %>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Raised By</th><th>Against</th><th>Reason</th><th>Status</th><th>Date</th><th>Evidence</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% disputes.forEach(function(d) { %>
+      <tr>
+        <td><%= d.raisedBy ? d.raisedBy.name : '—' %></td>
+        <td><%= d.againstUser ? d.againstUser.name : '—' %></td>
+        <td><%= d.reason %></td>
+        <td>
+          <% if (d.status === 'open') { %>
+            <span class="badge badge-open">Open</span>
+          <% } else if (d.status === 'under_review') { %>
+            <span class="badge badge-review">Under Review</span>
+          <% } else if (d.status === 'resolved') { %>
+            <span class="badge badge-resolved">Resolved</span>
+          <% } else { %>
+            <span class="badge badge-dismissed">Dismissed</span>
+          <% } %>
+        </td>
+        <td><%= new Date(d.createdAt).toLocaleDateString() %></td>
+        <td>
+          <% if (d.images && d.images.length > 0) { %>
+            <div class="doc-images">
+              <% d.images.forEach(function(img) { %>
+                <img class="doc-preview" src="https://rentpe.store/uploads/images/<%= img %>" alt="Evidence">
+              <% }); %>
+            </div>
+          <% } else { %>—<% } %>
+        </td>
+        <td>
+          <% if (d.status === 'open' || d.status === 'under_review') { %>
+            <form method="POST" action="/admin/action/disputes/<%= d.id %>/status" style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;">
+              <select name="status" style="width:130px;padding:4px 8px;font-size:.8rem;">
+                <option value="under_review" <%= d.status === 'under_review' ? 'selected' : '' %>>Under Review</option>
+                <option value="resolved">Resolved</option>
+                <option value="dismissed">Dismissed</option>
+              </select>
+              <input type="text" name="resolution" placeholder="Resolution note" style="width:160px;padding:4px 8px;font-size:.8rem;">
+              <button type="submit" class="btn btn-primary btn-sm">Update</button>
+            </form>
+          <% } else { %>
+            <span class="text-sm text-muted"><%= d.resolution || '—' %></span>
+          <% } %>
+        </td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<% if (pagination.pages > 1) { %>
+<div class="pagination">
+  <% for (var i = 1; i <= pagination.pages; i++) { %>
+    <a href="/admin/disputes?status=<%= status %>&page=<%= i %>" class="<%= pagination.page === i ? 'active' : '' %>"><%= i %></a>
+  <% } %>
+</div>
+<% } %>
+<% } %>
+
+<%- include('partials/foot') %>

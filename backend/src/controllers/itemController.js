@@ -7,6 +7,11 @@ const { CATEGORY_SPECS, resolveParentCategory } = require('../config/categorySpe
 
 exports.createItem = async (req, res) => {
   try {
+    // Only sellers can list items
+    if (!req.user.role || !['seller', 'admin', 'superadmin'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'You must be a verified seller to list items. Please complete KYC verification first.' });
+    }
+
     let sub = await Subscription.findOne({ where: { userId: req.user.id } });
     if (!sub) {
       sub = await Subscription.create({ userId: req.user.id });
@@ -31,6 +36,25 @@ exports.createItem = async (req, res) => {
     if (body.isAvailable !== undefined) body.isAvailable = body.isAvailable === 'true' || body.isAvailable === true;
     if (body.specs && typeof body.specs === 'string') {
       try { body.specs = JSON.parse(body.specs); } catch (_) { body.specs = {}; }
+    }
+
+    // Validate specs against category schema
+    if (body.specs && body.category) {
+      const parentCat = resolveParentCategory(body.category);
+      const schema = parentCat ? CATEGORY_SPECS[parentCat] : null;
+      if (schema) {
+        const validKeys = new Set(schema.fields.map(f => f.key));
+        const validatedSpecs = {};
+        for (const [key, value] of Object.entries(body.specs)) {
+          if (!validKeys.has(key)) continue; // strip unknown keys
+          const field = schema.fields.find(f => f.key === key);
+          if (field.type === 'select' && field.options && !field.options.includes(value)) continue;
+          if (field.type === 'number' && typeof value !== 'number' && isNaN(Number(value))) continue;
+          if (field.type === 'boolean' && typeof value !== 'boolean') continue;
+          validatedSpecs[key] = value;
+        }
+        body.specs = validatedSpecs;
+      }
     }
 
     const itemId = uuidv4();
@@ -82,6 +106,7 @@ exports.createItem = async (req, res) => {
       deliveryFee: body.deliveryFee || 0,
       deliveryOptions: body.deliveryOptions || [],
       specs: body.specs || {},
+      approvalStatus: 'pending_approval',
     });
 
     if (!isPremium) {
@@ -106,7 +131,7 @@ exports.getItems = async (req, res) => {
       ...specFilters // all remaining query params are treated as spec filters
     } = req.query;
 
-    const where = { isAvailable: true };
+    const where = { isAvailable: true, approvalStatus: 'approved' };
 
     if (search) {
       where[Op.or] = [
@@ -159,15 +184,21 @@ exports.getItems = async (req, res) => {
       }
     }
 
-    // Expire old boosts
-    await Item.update(
-      { isBoosted: false, boostPriority: 0 },
-      { where: { isBoosted: true, boostExpiresAt: { [Op.lt]: new Date() } } }
-    );
-
-    let order = [['isBoosted', 'DESC'], ['boostPriority', 'DESC'], ['createdAt', 'DESC']];
-    if (sort === 'price_asc') order = [['isBoosted', 'DESC'], ['pricePerDay', 'ASC']];
-    else if (sort === 'price_desc') order = [['isBoosted', 'DESC'], ['pricePerDay', 'DESC']];
+    let order = [
+      [sequelize.literal(`CASE WHEN is_boosted = true AND boost_expires_at > NOW() THEN 1 ELSE 0 END`), 'DESC'],
+      [sequelize.literal(`CASE WHEN is_boosted = true AND boost_expires_at > NOW() THEN boost_priority ELSE 0 END`), 'DESC'],
+      ['createdAt', 'DESC'],
+    ];
+    if (sort === 'price_asc') order = [
+      [sequelize.literal(`CASE WHEN is_boosted = true AND boost_expires_at > NOW() THEN 1 ELSE 0 END`), 'DESC'],
+      [sequelize.literal(`CASE WHEN is_boosted = true AND boost_expires_at > NOW() THEN boost_priority ELSE 0 END`), 'DESC'],
+      ['pricePerDay', 'ASC'],
+    ];
+    else if (sort === 'price_desc') order = [
+      [sequelize.literal(`CASE WHEN is_boosted = true AND boost_expires_at > NOW() THEN 1 ELSE 0 END`), 'DESC'],
+      [sequelize.literal(`CASE WHEN is_boosted = true AND boost_expires_at > NOW() THEN boost_priority ELSE 0 END`), 'DESC'],
+      ['pricePerDay', 'DESC'],
+    ];
 
     const offset = (Number(page) - 1) * Number(limit);
 
@@ -220,6 +251,30 @@ exports.updateItem = async (req, res) => {
     }
     if (body.deliveryAvailable !== undefined) body.deliveryAvailable = body.deliveryAvailable === 'true' || body.deliveryAvailable === true;
     if (body.isAvailable !== undefined) body.isAvailable = body.isAvailable === 'true' || body.isAvailable === true;
+
+    if (body.specs && typeof body.specs === 'string') {
+      try { body.specs = JSON.parse(body.specs); } catch (_) { body.specs = {}; }
+    }
+
+    // Validate specs against category schema
+    if (body.specs && (body.category || item.category)) {
+      const catToValidate = body.category || item.category;
+      const parentCat = resolveParentCategory(catToValidate);
+      const schema = parentCat ? CATEGORY_SPECS[parentCat] : null;
+      if (schema) {
+        const validKeys = new Set(schema.fields.map(f => f.key));
+        const validatedSpecs = {};
+        for (const [key, value] of Object.entries(body.specs)) {
+          if (!validKeys.has(key)) continue; // strip unknown keys
+          const field = schema.fields.find(f => f.key === key);
+          if (field.type === 'select' && field.options && !field.options.includes(value)) continue;
+          if (field.type === 'number' && typeof value !== 'number' && isNaN(Number(value))) continue;
+          if (field.type === 'boolean' && typeof value !== 'boolean') continue;
+          validatedSpecs[key] = value;
+        }
+        body.specs = validatedSpecs;
+      }
+    }
 
     if (req.files && req.files.length > 0) {
       const newImages = [];
@@ -276,8 +331,20 @@ exports.updateItem = async (req, res) => {
 
 exports.deleteItem = async (req, res) => {
   try {
-    const deleted = await Item.destroy({ where: { id: req.params.id, ownerId: req.user.id } });
-    if (!deleted) return res.status(404).json({ error: 'Item not found or unauthorized' });
+    const item = await Item.findOne({ where: { id: req.params.id, ownerId: req.user.id } });
+    if (!item) return res.status(404).json({ error: 'Item not found or unauthorized' });
+
+    const activeBookings = await Booking.count({
+      where: {
+        itemId: item.id,
+        status: { [Op.in]: ['pending', 'accepted', 'active'] },
+      },
+    });
+    if (activeBookings > 0) {
+      return res.status(400).json({ error: 'Cannot delete item with active bookings' });
+    }
+
+    await item.destroy(); // soft delete (paranoid mode)
     res.json({ message: 'Item deleted' });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -365,12 +432,7 @@ exports.getRecommended = async (req, res) => {
   try {
     const { latitude, longitude } = req.query;
 
-    await Item.update(
-      { isBoosted: false, boostPriority: 0 },
-      { where: { isBoosted: true, boostExpiresAt: { [Op.lt]: new Date() } } }
-    );
-
-    const where = { isAvailable: true };
+    const where = { isAvailable: true, approvalStatus: 'approved' };
 
     if (latitude && longitude) {
       const lat = parseFloat(latitude);
@@ -385,7 +447,11 @@ exports.getRecommended = async (req, res) => {
 
     const items = await Item.findAll({
       where,
-      order: [['isBoosted', 'DESC'], ['boostPriority', 'DESC'], ['createdAt', 'DESC']],
+      order: [
+        [sequelize.literal(`CASE WHEN is_boosted = true AND boost_expires_at > NOW() THEN 1 ELSE 0 END`), 'DESC'],
+        [sequelize.literal(`CASE WHEN is_boosted = true AND boost_expires_at > NOW() THEN boost_priority ELSE 0 END`), 'DESC'],
+        ['createdAt', 'DESC'],
+      ],
       limit: 20,
       include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'avatar', 'rating'] }],
     });

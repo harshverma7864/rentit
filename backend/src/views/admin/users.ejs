@@ -1,0 +1,58 @@
+<% var page = 'users'; var title = 'Users'; %>
+<%- include('partials/head') %>
+
+<div class="page-header"><h1>User Management</h1></div>
+
+<form method="GET" action="/admin/users" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end;">
+  <div class="form-group" style="margin-bottom:0;">
+    <label for="role">Role</label>
+    <select id="role" name="role" style="width:160px;">
+      <option value="">All Roles</option>
+      <option value="user" <%= role === 'user' ? 'selected' : '' %>>User</option>
+      <option value="seller" <%= role === 'seller' ? 'selected' : '' %>>Seller</option>
+      <option value="admin" <%= role === 'admin' ? 'selected' : '' %>>Admin</option>
+      <option value="superadmin" <%= role === 'superadmin' ? 'selected' : '' %>>Superadmin</option>
+    </select>
+  </div>
+  <div class="form-group" style="margin-bottom:0;">
+    <label for="search">Search</label>
+    <input type="text" id="search" name="search" value="<%= search %>" placeholder="Name, email, or phone" style="width:220px;">
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+</form>
+
+<% if (users.length === 0) { %>
+  <div class="empty-state">No users found.</div>
+<% } else { %>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Rating</th><th>Joined</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% users.forEach(function(u) { %>
+      <tr>
+        <td><%= u.name %></td>
+        <td><%= u.email %></td>
+        <td><%= u.phone || '—' %></td>
+        <td><span class="badge badge-default"><%= u.role %></span></td>
+        <td><%= u.rating ? Number(u.rating).toFixed(1) : '—' %></td>
+        <td><%= new Date(u.createdAt).toLocaleDateString() %></td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<% if (pagination.pages > 1) { %>
+<div class="pagination">
+  <% for (var i = 1; i <= pagination.pages; i++) { %>
+    <a href="/admin/users?role=<%= role %>&search=<%= search %>&page=<%= i %>" class="<%= pagination.page === i ? 'active' : '' %>"><%= i %></a>
+  <% } %>
+</div>
+<% } %>
+<% } %>
+
+<%- include('partials/foot') %>

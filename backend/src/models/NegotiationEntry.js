@@ -19,7 +19,7 @@ const NegotiationEntry = sequelize.define('NegotiationEntry', {
     },
   },
   amount: {
-    type: DataTypes.DOUBLE,
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
   message: {

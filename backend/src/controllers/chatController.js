@@ -9,6 +9,20 @@ const BLOCKED_PATTERNS = [
   /\b\d+\s*(,\s*)?(street|st|road|rd|avenue|ave|lane|ln|drive|dr|flat|house|floor|block|sector|colony|nagar|plot|gali|mohalla|chowk|marg|path|way)\b/i,
 ];
 
+/**
+ * Best-effort contact information blocking.
+ *
+ * LIMITATIONS: This regex-based approach is a deterrent, not a security boundary.
+ * Determined users can bypass it by:
+ * - Spelling out numbers ("nine eight seven six five...")
+ * - Using Unicode lookalike characters
+ * - Inserting zero-width characters between digits
+ * - Using creative formatting ("9-8-7-6-5-4-3-2-1-0")
+ * - Sharing contact info via images (not scanned)
+ *
+ * FUTURE: For stronger enforcement, consider server-side ML-based content
+ * moderation (e.g., Google Cloud Natural Language API) or human review queues.
+ */
 function containsBlockedContent(text) {
   return BLOCKED_PATTERNS.some(pattern => pattern.test(text));
 }

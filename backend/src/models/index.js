@@ -16,6 +16,7 @@ const Wallet = require('./Wallet');
 const WalletTransaction = require('./WalletTransaction');
 const Dispute = require('./Dispute');
 const Favorite = require('./Favorite');
+const SellerApplication = require('./SellerApplication');
 
 // ---- User associations ----
 User.hasMany(Address, { foreignKey: 'userId', as: 'addresses', onDelete: 'CASCADE' });
@@ -87,6 +88,11 @@ Favorite.belongsTo(User, { foreignKey: 'userId' });
 Favorite.belongsTo(Item, { foreignKey: 'itemId', as: 'item' });
 Item.hasMany(Favorite, { foreignKey: 'itemId', as: 'favorites', onDelete: 'CASCADE' });
 
+// ---- Seller Application associations ----
+SellerApplication.belongsTo(User, { foreignKey: 'userId', as: 'applicant' });
+SellerApplication.belongsTo(User, { foreignKey: 'reviewedBy', as: 'reviewer' });
+User.hasOne(SellerApplication, { foreignKey: 'userId', as: 'sellerApplication' });
+
 module.exports = {
   sequelize,
   User,
@@ -105,4 +111,5 @@ module.exports = {
   WalletTransaction,
   Dispute,
   Favorite,
+  SellerApplication,
 };

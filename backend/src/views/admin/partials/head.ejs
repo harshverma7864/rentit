@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title + ' — ' : '' %>RentPe Admin</title>
+  <link rel="stylesheet" href="/admin/public/admin.css">
+</head>
+<body>
+  <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+  <div class="admin-wrapper">
+    <aside class="sidebar">
+      <div class="sidebar-brand">RentPe Admin</div>
+      <nav class="sidebar-nav">
+        <a href="/admin" class="<%= typeof page !== 'undefined' && page === 'dashboard' ? 'active' : '' %>">📊 Dashboard</a>
+        <a href="/admin/items?status=pending_approval" class="<%= typeof page !== 'undefined' && page === 'items' ? 'active' : '' %>">📦 Items</a>
+        <a href="/admin/seller-applications?status=pending" class="<%= typeof page !== 'undefined' && page === 'seller-applications' ? 'active' : '' %>">📋 Seller Applications</a>
+        <a href="/admin/users" class="<%= typeof page !== 'undefined' && page === 'users' ? 'active' : '' %>">👥 Users</a>
+        <a href="/admin/disputes?status=open" class="<%= typeof page !== 'undefined' && page === 'disputes' ? 'active' : '' %>">⚖️ Disputes</a>
+        <a href="/admin/bookings" class="<%= typeof page !== 'undefined' && page === 'bookings' ? 'active' : '' %>">📅 Bookings</a>
+        <% if (typeof adminUser !== 'undefined' && adminUser.role === 'superadmin') { %>
+          <a href="/admin/admins" class="<%= typeof page !== 'undefined' && page === 'admins' ? 'active' : '' %>">🛡️ Admin Management</a>
+        <% } %>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="text-sm text-muted mb-2"><%= typeof adminUser !== 'undefined' ? adminUser.name : '' %></div>
+        <a href="/admin/logout" class="btn btn-outline btn-sm">Logout</a>
+      </div>
+    </aside>
+    <main class="content">

@@ -1,0 +1,86 @@
+<% var page = 'seller-applications'; var title = 'Seller Applications'; %>
+<%- include('partials/head') %>
+
+<div class="page-header"><h1>Seller Applications (KYC)</h1></div>
+
+<div class="filter-tabs">
+  <a href="/admin/seller-applications?status=pending" class="<%= status === 'pending' ? 'active' : '' %>">Pending</a>
+  <a href="/admin/seller-applications?status=approved" class="<%= status === 'approved' ? 'active' : '' %>">Approved</a>
+  <a href="/admin/seller-applications?status=rejected" class="<%= status === 'rejected' ? 'active' : '' %>">Rejected</a>
+</div>
+
+<% if (applications.length === 0) { %>
+  <div class="empty-state">No applications found.</div>
+<% } else { %>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Applicant</th><th>Email</th><th>Phone</th><th>Status</th><th>Date</th><th>Documents</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% applications.forEach(function(app) { %>
+      <tr>
+        <td><%= app.applicant ? app.applicant.name : '—' %></td>
+        <td><%= app.applicant ? app.applicant.email : '—' %></td>
+        <td><%= app.applicant ? app.applicant.phone : '—' %></td>
+        <td>
+          <% if (app.status === 'pending') { %>
+            <span class="badge badge-pending">Pending</span>
+          <% } else if (app.status === 'approved') { %>
+            <span class="badge badge-approved">Approved</span>
+          <% } else { %>
+            <span class="badge badge-rejected">Rejected</span>
+          <% } %>
+        </td>
+        <td><%= new Date(app.createdAt).toLocaleDateString() %></td>
+        <td>
+          <div class="doc-images">
+            <% if (app.aadhaarFront) { %><img class="doc-preview" src="https://rentpe.store/uploads/images/<%= app.aadhaarFront %>" title="Aadhaar Front"><% } %>
+            <% if (app.aadhaarBack) { %><img class="doc-preview" src="https://rentpe.store/uploads/images/<%= app.aadhaarBack %>" title="Aadhaar Back"><% } %>
+            <% if (app.panFront) { %><img class="doc-preview" src="https://rentpe.store/uploads/images/<%= app.panFront %>" title="PAN Front"><% } %>
+            <% if (app.panBack) { %><img class="doc-preview" src="https://rentpe.store/uploads/images/<%= app.panBack %>" title="PAN Back"><% } %>
+          </div>
+        </td>
+        <td>
+          <% if (app.status === 'pending') { %>
+            <div class="flex-gap">
+              <button class="btn btn-success btn-sm" onclick="approveAction('<%= app.id %>', 'seller')">Approve</button>
+              <button class="btn btn-danger btn-sm" onclick="showRejectModal('<%= app.id %>', 'seller')">Reject</button>
+            </div>
+          <% } else { %>—<% } %>
+        </td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<% if (pagination.pages > 1) { %>
+<div class="pagination">
+  <% for (var i = 1; i <= pagination.pages; i++) { %>
+    <a href="/admin/seller-applications?status=<%= status %>&page=<%= i %>" class="<%= pagination.page === i ? 'active' : '' %>"><%= i %></a>
+  <% } %>
+</div>
+<% } %>
+<% } %>
+
+<!-- Rejection Modal -->
+<div class="modal-overlay" id="reject-modal">
+  <div class="modal">
+    <h3>Reject Application</h3>
+    <div class="form-group">
+      <label for="reject-reason">Rejection Reason</label>
+      <textarea id="reject-reason" placeholder="Provide a reason for rejection..."></textarea>
+    </div>
+    <input type="hidden" id="reject-item-id">
+    <input type="hidden" id="reject-type" value="seller">
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-sm" onclick="hideRejectModal()">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="submitRejection()">Reject</button>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

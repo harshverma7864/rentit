@@ -1,6 +1,7 @@
 const { Booking, Item, Notification, NegotiationEntry, User, Wallet, WalletTransaction } = require('../models');
-const { Op } = require('sequelize');
+const { Op, Sequelize } = require('sequelize');
 const sequelize = require('../config/database');
+const { uploadToHosting } = require('../services/imageUpload');
 
 const bookingIncludes = [
   { model: Item, as: 'item', attributes: ['id', 'title', 'images', 'pricePerDay', 'category'] },
@@ -25,51 +26,62 @@ exports.createBooking = async (req, res) => {
       return res.status(400).json({ error: `Only ${item.quantity} available` });
     }
 
-    const conflict = await Booking.findOne({
-      where: {
+    const booking = await sequelize.transaction({
+      isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE,
+    }, async (t) => {
+      const conflict = await Booking.findOne({
+        where: {
+          itemId,
+          status: { [Op.in]: ['pending', 'accepted', 'active'] },
+          startDate: { [Op.lte]: new Date(endDate) },
+          endDate: { [Op.gte]: new Date(startDate) },
+        },
+        transaction: t,
+      });
+      if (conflict) throw new Error('Item is already booked for these dates');
+
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const days = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+      const pricePerDay = parseFloat(item.pricePerDay);
+      const deliveryFee = parseFloat(item.deliveryFee);
+      const secDeposit = parseFloat(item.securityDeposit);
+      const totalPrice = (days * pricePerDay + (deliveryOption === 'delivery' ? deliveryFee : 0)) * requestedQty;
+
+      const newBooking = await Booking.create({
         itemId,
-        status: { [Op.in]: ['pending', 'accepted', 'active'] },
-        startDate: { [Op.lte]: new Date(endDate) },
-        endDate: { [Op.gte]: new Date(startDate) },
-      },
-    });
-    if (conflict) return res.status(400).json({ error: 'Item is already booked for these dates' });
+        renterId: req.user.id,
+        ownerId: item.ownerId,
+        startDate: start,
+        endDate: end,
+        quantity: requestedQty,
+        totalPrice,
+        securityDeposit: secDeposit * requestedQty,
+        deliveryOption: deliveryOption || 'pickup',
+        renterNote: renterNote || '',
+        scheduledPickupTime: scheduledPickupTime ? new Date(scheduledPickupTime) : null,
+        eventDate: eventDate ? new Date(eventDate) : null,
+        renterSize: renterSize || '',
+        sizeDetails: sizeDetails || {},
+        alterationRequests: alterationRequests || '',
+        alterationStatus: alterationRequests ? 'requested' : 'none',
+        securityDepositStatus: 'unpaid',
+      }, { transaction: t });
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const days = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
-    const totalPrice = (days * item.pricePerDay + (deliveryOption === 'delivery' ? item.deliveryFee : 0)) * requestedQty;
+      await Notification.create({
+        userId: item.ownerId,
+        type: 'booking_request',
+        title: 'New Rental Request',
+        message: `${req.user.name} wants to rent your "${item.title}"`,
+        data: { bookingId: newBooking.id, itemId: item.id },
+      }, { transaction: t });
 
-    const booking = await Booking.create({
-      itemId,
-      renterId: req.user.id,
-      ownerId: item.ownerId,
-      startDate: start,
-      endDate: end,
-      quantity: requestedQty,
-      totalPrice,
-      securityDeposit: item.securityDeposit * requestedQty,
-      deliveryOption: deliveryOption || 'pickup',
-      renterNote: renterNote || '',
-      scheduledPickupTime: scheduledPickupTime ? new Date(scheduledPickupTime) : null,
-      eventDate: eventDate ? new Date(eventDate) : null,
-      renterSize: renterSize || '',
-      sizeDetails: sizeDetails || {},
-      alterationRequests: alterationRequests || '',
-      alterationStatus: alterationRequests ? 'requested' : 'none',
-      securityDepositStatus: 'unpaid',
+      return newBooking;
     });
 
-    const notification = await Notification.create({
-      userId: item.ownerId,
-      type: 'booking_request',
-      title: 'New Rental Request',
-      message: `${req.user.name} wants to rent your "${item.title}"`,
-      data: { bookingId: booking.id, itemId: item.id },
-    });
-
-    if (req.app.get('io')) {
-      req.app.get('io').to(item.ownerId).emit('notification', notification);
+    const io = req.app.get('io');
+    if (io) {
+      io.to(item.ownerId).emit('notification', { type: 'booking_request' });
     }
 
     const result = await Booking.findByPk(booking.id, { include: bookingIncludes });
@@ -141,42 +153,53 @@ exports.completeBooking = async (req, res) => {
       return res.status(400).json({ error: 'Booking cannot be completed' });
     }
 
-    await booking.update({ status: 'completed' });
+    await sequelize.transaction(async (t) => {
+      await booking.update({ status: 'completed' }, { transaction: t });
 
-    const completedItem = await Item.findByPk(booking.itemId);
-    if (completedItem) {
-      const newQty = completedItem.quantity + (booking.quantity || 1);
-      await completedItem.update({ quantity: newQty, isAvailable: true });
-    }
-
-    if (booking.paymentStatus === 'paid' && booking.securityDeposit > 0) {
-      const renterWallet = await Wallet.findOne({ where: { userId: booking.renterId } });
-      if (renterWallet) {
-        await renterWallet.update({ balance: renterWallet.balance + booking.securityDeposit });
-        await WalletTransaction.create({
-          walletId: renterWallet.id,
-          type: 'refund',
-          amount: booking.securityDeposit,
-          description: 'Security deposit returned on rental completion',
-          bookingId: booking.id,
-        });
+      const completedItem = await Item.findByPk(booking.itemId, { transaction: t });
+      if (completedItem) {
+        const newQty = completedItem.quantity + (booking.quantity || 1);
+        await completedItem.update({ quantity: newQty, isAvailable: true }, { transaction: t });
       }
-    }
 
-    const notifyUser = booking.ownerId === req.user.id ? booking.renterId : booking.ownerId;
-    const notification = await Notification.create({
-      userId: notifyUser,
-      type: 'booking_completed',
-      title: 'Rental Completed',
-      message: 'The rental has been marked as completed.',
-      data: { bookingId: booking.id },
+      if (booking.paymentStatus === 'paid' && parseFloat(booking.securityDeposit) > 0) {
+        const renterWallet = await Wallet.findOne({
+          where: { userId: booking.renterId },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+        if (renterWallet) {
+          const currentBalance = parseFloat(renterWallet.balance);
+          const deposit = parseFloat(booking.securityDeposit);
+          await renterWallet.update({ balance: currentBalance + deposit }, { transaction: t });
+          await WalletTransaction.create({
+            walletId: renterWallet.id,
+            type: 'refund',
+            amount: deposit,
+            description: 'Security deposit returned on rental completion',
+            bookingId: booking.id,
+          }, { transaction: t });
+        }
+      }
+
+      const notifyUser = booking.ownerId === req.user.id ? booking.renterId : booking.ownerId;
+      await Notification.create({
+        userId: notifyUser,
+        type: 'booking_completed',
+        title: 'Rental Completed',
+        message: 'The rental has been marked as completed.',
+        data: { bookingId: booking.id },
+      }, { transaction: t });
     });
 
-    if (req.app.get('io')) {
-      req.app.get('io').to(notifyUser).emit('notification', notification);
+    const notifyUser = booking.ownerId === req.user.id ? booking.renterId : booking.ownerId;
+    const io = req.app.get('io');
+    if (io) {
+      io.to(notifyUser).emit('notification', { type: 'booking_completed' });
     }
 
-    res.json({ booking });
+    const result = await Booking.findByPk(booking.id, { include: bookingIncludes });
+    res.json({ booking: result });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -193,68 +216,84 @@ exports.cancelBooking = async (req, res) => {
     });
     if (!booking) return res.status(404).json({ error: 'Booking not found or cannot cancel' });
 
+    if (booking.deliveryStatus === 'delivered') {
+      return res.status(400).json({ error: 'Cannot cancel after delivery' });
+    }
+
     const originalStatus = booking.status;
 
-    if (booking.deliveryStatus === 'out_for_delivery') {
-      const item = await Item.findByPk(booking.itemId);
-      const deliveryFee = item ? item.deliveryFee : 0;
+    await sequelize.transaction(async (t) => {
+      if (booking.deliveryStatus === 'out_for_delivery') {
+        const item = await Item.findByPk(booking.itemId, { transaction: t });
+        const deliveryFee = item ? parseFloat(item.deliveryFee) : 0;
 
-      if (booking.paymentStatus === 'paid') {
-        const renterWallet = await Wallet.findOne({ where: { userId: req.user.id } });
-        if (renterWallet) {
-          const refund = booking.totalPrice + booking.securityDeposit - deliveryFee;
-          await renterWallet.update({ balance: renterWallet.balance + refund });
-          await WalletTransaction.create({
-            walletId: renterWallet.id,
-            type: 'refund',
-            amount: refund,
-            description: `Cancellation refund (delivery fee ₹${deliveryFee} deducted)`,
-            bookingId: booking.id,
+        if (booking.paymentStatus === 'paid') {
+          const renterWallet = await Wallet.findOne({
+            where: { userId: req.user.id },
+            transaction: t,
+            lock: t.LOCK.UPDATE,
           });
+          if (renterWallet) {
+            const currentBalance = parseFloat(renterWallet.balance);
+            const refund = parseFloat(booking.totalPrice) + parseFloat(booking.securityDeposit) - deliveryFee;
+            await renterWallet.update({ balance: currentBalance + refund }, { transaction: t });
+            await WalletTransaction.create({
+              walletId: renterWallet.id,
+              type: 'refund',
+              amount: refund,
+              description: `Cancellation refund (delivery fee ₹${deliveryFee} deducted)`,
+              bookingId: booking.id,
+            }, { transaction: t });
+          }
+        }
+        await booking.update({ status: 'cancelled', deliveryStatus: 'none' }, { transaction: t });
+      } else {
+        if (booking.paymentStatus === 'paid') {
+          const renterWallet = await Wallet.findOne({
+            where: { userId: req.user.id },
+            transaction: t,
+            lock: t.LOCK.UPDATE,
+          });
+          if (renterWallet) {
+            const currentBalance = parseFloat(renterWallet.balance);
+            const refund = parseFloat(booking.totalPrice) + parseFloat(booking.securityDeposit);
+            await renterWallet.update({ balance: currentBalance + refund }, { transaction: t });
+            await WalletTransaction.create({
+              walletId: renterWallet.id,
+              type: 'refund',
+              amount: refund,
+              description: 'Full cancellation refund',
+              bookingId: booking.id,
+            }, { transaction: t });
+          }
+        }
+        await booking.update({ status: 'cancelled' }, { transaction: t });
+      }
+
+      if (['accepted', 'active'].includes(originalStatus)) {
+        const cancelledItem = await Item.findByPk(booking.itemId, { transaction: t });
+        if (cancelledItem) {
+          const newQty = cancelledItem.quantity + (booking.quantity || 1);
+          await cancelledItem.update({ quantity: newQty, isAvailable: true }, { transaction: t });
         }
       }
-      await booking.update({ status: 'cancelled', deliveryStatus: 'none' });
-    } else if (booking.deliveryStatus === 'delivered') {
-      return res.status(400).json({ error: 'Cannot cancel after delivery' });
-    } else {
-      if (booking.paymentStatus === 'paid') {
-        const renterWallet = await Wallet.findOne({ where: { userId: req.user.id } });
-        if (renterWallet) {
-          const refund = booking.totalPrice + booking.securityDeposit;
-          await renterWallet.update({ balance: renterWallet.balance + refund });
-          await WalletTransaction.create({
-            walletId: renterWallet.id,
-            type: 'refund',
-            amount: refund,
-            description: 'Full cancellation refund',
-            bookingId: booking.id,
-          });
-        }
-      }
-      await booking.update({ status: 'cancelled' });
-    }
 
-    if (['accepted', 'active'].includes(originalStatus)) {
-      const cancelledItem = await Item.findByPk(booking.itemId);
-      if (cancelledItem) {
-        const newQty = cancelledItem.quantity + (booking.quantity || 1);
-        await cancelledItem.update({ quantity: newQty, isAvailable: true });
-      }
-    }
-
-    const notification = await Notification.create({
-      userId: booking.ownerId,
-      type: 'booking_cancelled',
-      title: 'Booking Cancelled',
-      message: 'A rental request has been cancelled by the renter.',
-      data: { bookingId: booking.id },
+      await Notification.create({
+        userId: booking.ownerId,
+        type: 'booking_cancelled',
+        title: 'Booking Cancelled',
+        message: 'A rental request has been cancelled by the renter.',
+        data: { bookingId: booking.id },
+      }, { transaction: t });
     });
 
-    if (req.app.get('io')) {
-      req.app.get('io').to(booking.ownerId).emit('notification', notification);
+    const io = req.app.get('io');
+    if (io) {
+      io.to(booking.ownerId).emit('notification', { type: 'booking_cancelled' });
     }
 
-    res.json({ booking });
+    const result = await Booking.findByPk(booking.id, { include: bookingIncludes });
+    res.json({ booking: result });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -307,17 +346,11 @@ exports.getMyBookings = async (req, res) => {
     const bookings = await Booking.findAll({
       where,
       order: [['createdAt', 'DESC']],
-      include: bookingIncludes,
+      include: [
+        ...bookingIncludes,
+        { model: NegotiationEntry, as: 'negotiationHistory', order: [['createdAt', 'ASC']] },
+      ],
     });
-
-    // Attach negotiation history
-    for (const booking of bookings) {
-      const history = await NegotiationEntry.findAll({
-        where: { bookingId: booking.id },
-        order: [['createdAt', 'ASC']],
-      });
-      booking.dataValues.negotiationHistory = history;
-    }
 
     res.json({ bookings });
   } catch (error) {
@@ -336,16 +369,11 @@ exports.getBookingById = async (req, res) => {
         { model: Item, as: 'item' },
         { model: User, as: 'renter', attributes: ['id', 'name', 'avatar', 'phone', 'latitude', 'longitude', 'locationAddress', 'locationCity'] },
         { model: User, as: 'owner', attributes: ['id', 'name', 'avatar', 'phone', 'latitude', 'longitude', 'locationAddress', 'locationCity'] },
+        { model: NegotiationEntry, as: 'negotiationHistory', order: [['createdAt', 'ASC']] },
       ],
     });
 
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
-
-    const history = await NegotiationEntry.findAll({
-      where: { bookingId: booking.id },
-      order: [['createdAt', 'ASC']],
-    });
-    booking.dataValues.negotiationHistory = history;
 
     res.json({ booking });
   } catch (error) {
@@ -438,10 +466,11 @@ exports.acceptNegotiation = async (req, res) => {
       return res.status(400).json({ error: 'No price proposal to accept' });
     }
 
+    const proposedPrice = parseFloat(booking.proposedPrice);
     await booking.update({
       negotiationStatus: 'accepted',
-      finalPrice: booking.proposedPrice,
-      totalPrice: booking.proposedPrice,
+      finalPrice: proposedPrice,
+      totalPrice: proposedPrice,
     });
 
     const isOwner = booking.ownerId === req.user.id;
@@ -497,7 +526,7 @@ exports.updateAlterationStatus = async (req, res) => {
   }
 };
 
-// ---- Return Status Update (Owner inspects returned item) ----
+// ---- Return Status Update ----
 exports.updateReturnStatus = async (req, res) => {
   try {
     const { returnStatus, returnNote, depositAction } = req.body;
@@ -505,81 +534,209 @@ exports.updateReturnStatus = async (req, res) => {
       return res.status(400).json({ error: 'Invalid return status' });
     }
 
-    const booking = await Booking.findOne({ where: { id: req.params.id, ownerId: req.user.id } });
+    // Renter can set to 'pending' (initiate return), owner handles 'returned'/'damaged'
+    const booking = await Booking.findOne({
+      where: {
+        id: req.params.id,
+        [Op.or]: [{ ownerId: req.user.id }, { renterId: req.user.id }],
+      },
+    });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
     if (!['accepted', 'active', 'completed'].includes(booking.status)) {
       return res.status(400).json({ error: 'Booking is not in a returnable state' });
     }
 
-    const updates = { returnStatus, returnNote: returnNote || '' };
+    const isOwner = booking.ownerId === req.user.id;
+    const isRenter = booking.renterId === req.user.id;
 
-    // Handle security deposit based on return condition
-    if (returnStatus === 'returned' && depositAction === 'refund' && booking.securityDepositStatus === 'paid') {
-      updates.securityDepositStatus = 'refunded';
-      const renterWallet = await Wallet.findOne({ where: { userId: booking.renterId } });
-      if (renterWallet) {
-        await renterWallet.update({ balance: renterWallet.balance + booking.securityDeposit });
-        await WalletTransaction.create({
-          walletId: renterWallet.id,
-          type: 'refund',
-          amount: booking.securityDeposit,
-          description: 'Security deposit refunded - item returned in good condition',
-          bookingId: booking.id,
+    // Renter can only set to 'pending'
+    if (isRenter && returnStatus !== 'pending') {
+      return res.status(400).json({ error: 'Renter can only initiate return (set to pending)' });
+    }
+    // Owner handles 'returned' and 'damaged'
+    if (isOwner && returnStatus === 'pending') {
+      return res.status(400).json({ error: 'Owner cannot set return to pending — renter initiates return' });
+    }
+
+    await sequelize.transaction(async (t) => {
+      const updates = { returnStatus, returnNote: returnNote || '' };
+
+      // Handle security deposit based on return condition
+      if (returnStatus === 'returned' && depositAction === 'refund' && booking.securityDepositStatus === 'paid') {
+        updates.securityDepositStatus = 'refunded';
+        const renterWallet = await Wallet.findOne({
+          where: { userId: booking.renterId },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
         });
-      }
-    } else if (returnStatus === 'damaged' && booking.securityDepositStatus === 'paid') {
-      const deduction = req.body.deductionAmount ? Math.min(Number(req.body.deductionAmount), booking.securityDeposit) : booking.securityDeposit;
-      const refundAmount = booking.securityDeposit - deduction;
-      updates.securityDepositStatus = 'deducted';
-
-      if (refundAmount > 0) {
-        const renterWallet = await Wallet.findOne({ where: { userId: booking.renterId } });
         if (renterWallet) {
-          await renterWallet.update({ balance: renterWallet.balance + refundAmount });
+          const currentBalance = parseFloat(renterWallet.balance);
+          const deposit = parseFloat(booking.securityDeposit);
+          await renterWallet.update({ balance: currentBalance + deposit }, { transaction: t });
           await WalletTransaction.create({
             walletId: renterWallet.id,
             type: 'refund',
-            amount: refundAmount,
-            description: `Partial security deposit refund (₹${deduction} deducted for damage)`,
+            amount: deposit,
+            description: 'Security deposit refunded - item returned in good condition',
             bookingId: booking.id,
-          });
+          }, { transaction: t });
         }
+      } else if (returnStatus === 'damaged' && booking.securityDepositStatus === 'paid') {
+        const deduction = req.body.deductionAmount ? Math.min(Number(req.body.deductionAmount), parseFloat(booking.securityDeposit)) : parseFloat(booking.securityDeposit);
+        const refundAmount = parseFloat(booking.securityDeposit) - deduction;
+        updates.securityDepositStatus = 'deducted';
+
+        if (refundAmount > 0) {
+          const renterWallet = await Wallet.findOne({
+            where: { userId: booking.renterId },
+            transaction: t,
+            lock: t.LOCK.UPDATE,
+          });
+          if (renterWallet) {
+            const currentBalance = parseFloat(renterWallet.balance);
+            await renterWallet.update({ balance: currentBalance + refundAmount }, { transaction: t });
+            await WalletTransaction.create({
+              walletId: renterWallet.id,
+              type: 'refund',
+              amount: refundAmount,
+              description: `Partial security deposit refund (₹${deduction} deducted for damage)`,
+              bookingId: booking.id,
+            }, { transaction: t });
+          }
+        }
+
+        // Credit deduction to owner
+        let ownerWallet = await Wallet.findOne({
+          where: { userId: booking.ownerId },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+        if (!ownerWallet) {
+          ownerWallet = await Wallet.create({ userId: booking.ownerId, balance: 0 }, { transaction: t });
+        }
+        const ownerBalance = parseFloat(ownerWallet.balance);
+        await ownerWallet.update({ balance: ownerBalance + deduction }, { transaction: t });
+        await WalletTransaction.create({
+          walletId: ownerWallet.id,
+          type: 'credit',
+          amount: deduction,
+          description: `Damage deduction from security deposit`,
+          bookingId: booking.id,
+        }, { transaction: t });
       }
 
-      // Credit deduction to owner
-      let ownerWallet = await Wallet.findOne({ where: { userId: booking.ownerId } });
-      if (!ownerWallet) ownerWallet = await Wallet.create({ userId: booking.ownerId, balance: 0 });
-      await ownerWallet.update({ balance: ownerWallet.balance + deduction });
-      await WalletTransaction.create({
-        walletId: ownerWallet.id,
-        type: 'credit',
-        amount: deduction,
-        description: `Damage deduction from security deposit`,
-        bookingId: booking.id,
-      });
-    }
+      await booking.update(updates, { transaction: t });
 
-    await booking.update(updates);
-
-    // Restore item quantity on successful return
-    if (returnStatus === 'returned') {
-      const item = await Item.findByPk(booking.itemId);
-      if (item) {
-        const newQty = item.quantity + (booking.quantity || 1);
-        await item.update({ quantity: newQty, isAvailable: true });
+      // Restore item quantity on successful return
+      if (returnStatus === 'returned') {
+        const item = await Item.findByPk(booking.itemId, { transaction: t });
+        if (item) {
+          const newQty = item.quantity + (booking.quantity || 1);
+          await item.update({ quantity: newQty, isAvailable: true }, { transaction: t });
+        }
+        await booking.update({ status: 'completed' }, { transaction: t });
       }
-      await booking.update({ status: 'completed' });
+
+      // Notification: renter initiates → notify owner. Owner processes → notify renter.
+      if (returnStatus === 'pending') {
+        await Notification.create({
+          userId: booking.ownerId,
+          type: 'general',
+          title: 'Return Initiated',
+          message: 'The renter wants to return the item. Please arrange pickup.',
+          data: { bookingId: booking.id },
+        }, { transaction: t });
+      } else {
+        await Notification.create({
+          userId: booking.renterId,
+          type: 'general',
+          title: returnStatus === 'damaged' ? 'Return - Damage Reported' : 'Return Processed',
+          message: returnStatus === 'damaged'
+            ? `Damage was reported on your returned item. ${returnNote || ''}`.trim()
+            : 'Your return has been processed successfully. Security deposit will be refunded.',
+          data: { bookingId: booking.id },
+        }, { transaction: t });
+      }
+    });
+
+    // Socket notification
+    const io = req.app.get('io');
+    if (io) {
+      const notifyUserId = returnStatus === 'pending' ? booking.ownerId : booking.renterId;
+      io.to(notifyUserId).emit('notification', { type: 'return_update' });
     }
+
+    const result = await Booking.findByPk(booking.id, { include: bookingIncludes });
+    res.json({ booking: result });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// ---- Confirm Receipt (Renter uploads delivery proof image) ----
+exports.confirmReceipt = async (req, res) => {
+  try {
+    const booking = await Booking.findOne({
+      where: { id: req.params.id, renterId: req.user.id },
+    });
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (booking.deliveryStatus !== 'out_for_delivery') {
+      return res.status(400).json({ error: 'Booking is not out for delivery' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'Receipt image is required' });
+    }
+
+    const filename = await uploadToHosting(req.file.buffer, req.file.originalname, req.file.mimetype, `receipts/${booking.id}`);
+    await booking.update({ deliveryStatus: 'delivered', receiptImage: filename });
+
+    await Notification.create({
+      userId: booking.ownerId,
+      type: 'general',
+      title: 'Item Received',
+      message: 'The renter has confirmed receipt of your item.',
+      data: { bookingId: booking.id },
+    });
+
+    const io = req.app.get('io');
+    if (io) io.to(booking.ownerId).emit('notification', { type: 'receipt_confirmed' });
+
+    const result = await Booking.findByPk(booking.id, { include: bookingIncludes });
+    res.json({ booking: result });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// ---- Request Return (Owner requests renter to return overdue item) ----
+exports.requestReturn = async (req, res) => {
+  try {
+    const booking = await Booking.findOne({
+      where: { id: req.params.id, ownerId: req.user.id },
+    });
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (booking.status !== 'active') {
+      return res.status(400).json({ error: 'Booking is not active' });
+    }
+    if (new Date(booking.endDate) > new Date()) {
+      return res.status(400).json({ error: 'Booking is not overdue' });
+    }
+    if (booking.returnRequested) {
+      return res.status(400).json({ error: 'Return already requested' });
+    }
+
+    await booking.update({ returnRequested: true });
 
     await Notification.create({
       userId: booking.renterId,
       type: 'general',
-      title: returnStatus === 'damaged' ? 'Return - Damage Reported' : 'Return Processed',
-      message: returnStatus === 'damaged'
-        ? `Damage was reported on your returned item. ${returnNote || ''}`.trim()
-        : 'Your return has been processed successfully. Security deposit will be refunded.',
+      title: 'Return Requested',
+      message: 'The owner has requested you return the item.',
       data: { bookingId: booking.id },
     });
+
+    const io = req.app.get('io');
+    if (io) io.to(booking.renterId).emit('notification', { type: 'return_requested' });
 
     const result = await Booking.findByPk(booking.id, { include: bookingIncludes });
     res.json({ booking: result });

@@ -34,23 +34,23 @@ const Item = sequelize.define('Item', {
     defaultValue: [],
   },
   pricePerHour: {
-    type: DataTypes.DOUBLE,
+    type: DataTypes.DECIMAL(10, 2),
     defaultValue: 0,
   },
   pricePerDay: {
-    type: DataTypes.DOUBLE,
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
   pricePerWeek: {
-    type: DataTypes.DOUBLE,
+    type: DataTypes.DECIMAL(10, 2),
     defaultValue: 0,
   },
   price: {
-    type: DataTypes.DOUBLE,
+    type: DataTypes.DECIMAL(10, 2),
     defaultValue: 0,
   },
   securityDeposit: {
-    type: DataTypes.DOUBLE,
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
   condition: {
@@ -126,7 +126,7 @@ const Item = sequelize.define('Item', {
     defaultValue: false,
   },
   deliveryFee: {
-    type: DataTypes.DOUBLE,
+    type: DataTypes.DECIMAL(10, 2),
     defaultValue: 0,
   },
   deliveryOptions: {
@@ -145,10 +145,22 @@ const Item = sequelize.define('Item', {
     type: DataTypes.INTEGER,
     defaultValue: 0,
   },
+  approvalStatus: {
+    type: DataTypes.STRING,
+    defaultValue: 'pending_approval',
+    validate: {
+      isIn: [['pending_approval', 'approved', 'rejected']],
+    },
+  },
+  rejectionReason: {
+    type: DataTypes.TEXT,
+    defaultValue: '',
+  },
 }, {
   tableName: 'items',
   underscored: true,
   timestamps: true,
+  paranoid: true,
   indexes: [
     { fields: ['owner_id'] },
     { fields: ['category'] },

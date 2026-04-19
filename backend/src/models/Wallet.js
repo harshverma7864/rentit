@@ -13,7 +13,7 @@ const Wallet = sequelize.define('Wallet', {
     unique: true,
   },
   balance: {
-    type: DataTypes.DOUBLE,
+    type: DataTypes.DECIMAL(10, 2),
     defaultValue: 0,
   },
 }, {

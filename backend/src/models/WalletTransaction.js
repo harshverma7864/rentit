@@ -19,7 +19,7 @@ const WalletTransaction = sequelize.define('WalletTransaction', {
     },
   },
   amount: {
-    type: DataTypes.DOUBLE,
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
   description: {

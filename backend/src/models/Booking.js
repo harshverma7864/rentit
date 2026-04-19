@@ -32,11 +32,11 @@ const Booking = sequelize.define('Booking', {
     defaultValue: 1,
   },
   totalPrice: {
-    type: DataTypes.DOUBLE,
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
   securityDeposit: {
-    type: DataTypes.DOUBLE,
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
   status: {
@@ -140,7 +140,7 @@ const Booking = sequelize.define('Booking', {
     allowNull: true,
   },
   proposedPrice: {
-    type: DataTypes.DOUBLE,
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
   },
   negotiationStatus: {
@@ -151,8 +151,16 @@ const Booking = sequelize.define('Booking', {
     },
   },
   finalPrice: {
-    type: DataTypes.DOUBLE,
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
+  },
+  receiptImage: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  returnRequested: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
   },
 }, {
   tableName: 'bookings',

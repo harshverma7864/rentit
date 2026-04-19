@@ -1,0 +1,62 @@
+<% var page = 'bookings'; var title = 'Bookings'; %>
+<%- include('partials/head') %>
+
+<div class="page-header"><h1>Bookings Overview</h1></div>
+
+<div class="filter-tabs">
+  <a href="/admin/bookings" class="<%= !status ? 'active' : '' %>">All</a>
+  <a href="/admin/bookings?status=pending" class="<%= status === 'pending' ? 'active' : '' %>">Pending</a>
+  <a href="/admin/bookings?status=accepted" class="<%= status === 'accepted' ? 'active' : '' %>">Accepted</a>
+  <a href="/admin/bookings?status=active" class="<%= status === 'active' ? 'active' : '' %>">Active</a>
+  <a href="/admin/bookings?status=completed" class="<%= status === 'completed' ? 'active' : '' %>">Completed</a>
+  <a href="/admin/bookings?status=cancelled" class="<%= status === 'cancelled' ? 'active' : '' %>">Cancelled</a>
+</div>
+
+<% if (bookings.length === 0) { %>
+  <div class="empty-state">No bookings found.</div>
+<% } else { %>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th><th>Renter</th><th>Owner</th><th>Start</th><th>End</th><th>Price</th><th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% bookings.forEach(function(b) { %>
+      <tr>
+        <td><%= b.item ? b.item.title : '—' %></td>
+        <td><%= b.renter ? b.renter.name : '—' %></td>
+        <td><%= b.owner ? b.owner.name : '—' %></td>
+        <td><%= new Date(b.startDate).toLocaleDateString() %></td>
+        <td><%= new Date(b.endDate).toLocaleDateString() %></td>
+        <td>₹<%= b.totalPrice %></td>
+        <td>
+          <% if (b.status === 'pending') { %>
+            <span class="badge badge-pending">Pending</span>
+          <% } else if (b.status === 'active' || b.status === 'accepted') { %>
+            <span class="badge badge-active"><%= b.status %></span>
+          <% } else if (b.status === 'completed') { %>
+            <span class="badge badge-completed">Completed</span>
+          <% } else if (b.status === 'cancelled' || b.status === 'rejected') { %>
+            <span class="badge badge-cancelled"><%= b.status %></span>
+          <% } else { %>
+            <span class="badge badge-default"><%= b.status %></span>
+          <% } %>
+        </td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<% if (pagination.pages > 1) { %>
+<div class="pagination">
+  <% for (var i = 1; i <= pagination.pages; i++) { %>
+    <a href="/admin/bookings?<%= status ? 'status=' + status + '&' : '' %>page=<%= i %>" class="<%= pagination.page === i ? 'active' : '' %>"><%= i %></a>
+  <% } %>
+</div>
+<% } %>
+<% } %>
+
+<%- include('partials/foot') %>

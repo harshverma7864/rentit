@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { User, Address, Item, Review, Subscription, Booking, ContactView } = require('../models');
+const { User, Address, Item, Review, Subscription, Booking, ContactView, SellerApplication } = require('../models');
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
 const { uploadToHosting } = require('../services/imageUpload');
@@ -247,13 +247,61 @@ exports.setDefaultAddress = async (req, res) => {
   }
 };
 
-// ---- Seller Profile ----
+// ---- Seller KYC Application ----
 
-exports.becomeSeller = async (req, res) => {
+exports.submitSellerApplication = async (req, res) => {
   try {
-    await User.update({ isSeller: true }, { where: { id: req.user.id } });
-    const user = await User.findByPk(req.user.id);
-    res.json({ user });
+    if (!req.files || req.files.length < 4) {
+      return res.status(400).json({ error: 'All 4 KYC document images are required (aadhaar front, aadhaar back, pan front, pan back)' });
+    }
+
+    // Check for existing application
+    const existing = await SellerApplication.findOne({ where: { userId: req.user.id } });
+    if (existing && ['pending', 'approved'].includes(existing.status)) {
+      return res.status(400).json({ error: 'You already have a pending or approved seller application' });
+    }
+
+    // Upload KYC images
+    const folder = `kyc/${req.user.id}`;
+    const filenames = [];
+    for (const file of req.files) {
+      const filename = await uploadToHosting(file.buffer, file.originalname, file.mimetype, folder);
+      filenames.push(filename);
+    }
+
+    if (existing && existing.status === 'rejected') {
+      // Allow resubmission
+      await existing.update({
+        aadhaarFront: filenames[0],
+        aadhaarBack: filenames[1],
+        panFront: filenames[2],
+        panBack: filenames[3],
+        status: 'pending',
+        rejectionReason: '',
+        reviewedBy: null,
+        reviewedAt: null,
+      });
+      return res.json({ application: existing });
+    }
+
+    const application = await SellerApplication.create({
+      userId: req.user.id,
+      aadhaarFront: filenames[0],
+      aadhaarBack: filenames[1],
+      panFront: filenames[2],
+      panBack: filenames[3],
+    });
+
+    res.status(201).json({ application });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.getSellerApplication = async (req, res) => {
+  try {
+    const application = await SellerApplication.findOne({ where: { userId: req.user.id } });
+    res.json({ application: application || null });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

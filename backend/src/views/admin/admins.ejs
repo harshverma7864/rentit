@@ -1,0 +1,65 @@
+<% var page = 'admins'; var title = 'Admin Management'; %>
+<%- include('partials/head') %>
+
+<div class="page-header"><h1>Admin Management</h1></div>
+
+<% if (typeof error !== 'undefined' && error) { %>
+  <div class="alert alert-error"><%= error %></div>
+<% } %>
+<% if (typeof success !== 'undefined' && success) { %>
+  <div class="alert alert-success"><%= success %></div>
+<% } %>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+  <!-- Create Admin Form -->
+  <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:20px;">
+    <h3 style="margin-bottom:16px;">Create Admin</h3>
+    <form method="POST" action="/admin/admins/create">
+      <div class="form-group">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required>
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required minlength="6">
+      </div>
+      <div class="form-group">
+        <label for="phone">Phone</label>
+        <input type="tel" id="phone" name="phone" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Create Admin</button>
+    </form>
+  </div>
+
+  <!-- Admin List -->
+  <div>
+    <h3 style="margin-bottom:16px;">Current Admins</h3>
+    <% if (admins.length === 0) { %>
+      <div class="empty-state">No admins found.</div>
+    <% } else { %>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Email</th><th>Phone</th><th>Joined</th></tr>
+        </thead>
+        <tbody>
+          <% admins.forEach(function(a) { %>
+          <tr>
+            <td><%= a.name %></td>
+            <td><%= a.email %></td>
+            <td><%= a.phone || '—' %></td>
+            <td><%= new Date(a.createdAt).toLocaleDateString() %></td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

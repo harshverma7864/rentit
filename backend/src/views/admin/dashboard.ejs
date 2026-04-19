@@ -1,0 +1,36 @@
+<% var page = 'dashboard'; var title = 'Dashboard'; %>
+<%- include('partials/head') %>
+
+<div class="page-header"><h1>Dashboard</h1></div>
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="label">Total Users</div>
+    <div class="value"><%= stats.totalUsers %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Total Sellers</div>
+    <div class="value"><%= stats.totalSellers %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Total Items</div>
+    <div class="value"><%= stats.totalItems %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Pending Items</div>
+    <div class="value"><%= stats.pendingItems %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Pending Seller Apps</div>
+    <div class="value"><%= stats.pendingSellerApplications %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Active Bookings</div>
+    <div class="value"><%= stats.activeBookings %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Total Revenue</div>
+    <div class="value">₹<%= Number(stats.totalRevenue || 0).toLocaleString('en-IN') %></div>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

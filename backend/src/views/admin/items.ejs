@@ -1,0 +1,89 @@
+<% var page = 'items'; var title = 'Items'; %>
+<%- include('partials/head') %>
+
+<div class="page-header"><h1>Items Management</h1></div>
+
+<div class="filter-tabs">
+  <a href="/admin/items?status=pending_approval" class="<%= status === 'pending_approval' ? 'active' : '' %>">Pending</a>
+  <a href="/admin/items?status=approved" class="<%= status === 'approved' ? 'active' : '' %>">Approved</a>
+  <a href="/admin/items?status=rejected" class="<%= status === 'rejected' ? 'active' : '' %>">Rejected</a>
+</div>
+
+<% if (items.length === 0) { %>
+  <div class="empty-state">No items found.</div>
+<% } else { %>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Image</th><th>Title</th><th>Category</th><th>Price/Day</th><th>Owner</th><th>Status</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% items.forEach(function(item) { %>
+      <tr>
+        <td>
+          <% if (item.images && item.images.length > 0) { %>
+            <img class="thumb" src="https://rentpe.store/uploads/images/<%= item.images[0] %>" alt="">
+          <% } else { %>—<% } %>
+        </td>
+        <td><%= item.title %></td>
+        <td><%= item.category %></td>
+        <td>₹<%= item.pricePerDay %></td>
+        <td><%= item.owner ? item.owner.name : '—' %></td>
+        <td>
+          <% if (item.approvalStatus === 'pending_approval') { %>
+            <span class="badge badge-pending">Pending</span>
+          <% } else if (item.approvalStatus === 'approved') { %>
+            <span class="badge badge-approved">Approved</span>
+          <% } else { %>
+            <span class="badge badge-rejected">Rejected</span>
+          <% } %>
+        </td>
+        <td>
+          <div class="flex-gap">
+          <% if (item.approvalStatus === 'pending_approval') { %>
+              <button class="btn btn-success btn-sm" onclick="approveAction('<%= item.id %>', 'item')">Approve</button>
+              <button class="btn btn-danger btn-sm" onclick="showRejectModal('<%= item.id %>', 'item')">Reject</button>
+          <% } %>
+          <% if (typeof adminUser !== 'undefined' && adminUser.role === 'superadmin') { %>
+              <a href="/admin/items/<%= item.id %>" class="btn btn-primary btn-sm">View</a>
+              <form method="POST" action="/admin/action/items/<%= item.id %>/delete" style="display:inline;" onsubmit="return confirm('Permanently delete this item?')">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+          <% } %>
+          </div>
+        </td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<% if (pagination.pages > 1) { %>
+<div class="pagination">
+  <% for (var i = 1; i <= pagination.pages; i++) { %>
+    <a href="/admin/items?status=<%= status %>&page=<%= i %>" class="<%= pagination.page === i ? 'active' : '' %>"><%= i %></a>
+  <% } %>
+</div>
+<% } %>
+<% } %>
+
+<!-- Rejection Modal -->
+<div class="modal-overlay" id="reject-modal">
+  <div class="modal">
+    <h3>Reject Item</h3>
+    <div class="form-group">
+      <label for="reject-reason">Rejection Reason</label>
+      <textarea id="reject-reason" placeholder="Provide a reason for rejection..."></textarea>
+    </div>
+    <input type="hidden" id="reject-item-id">
+    <input type="hidden" id="reject-type" value="item">
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-sm" onclick="hideRejectModal()">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="submitRejection()">Reject</button>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

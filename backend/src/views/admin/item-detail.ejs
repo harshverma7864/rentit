@@ -1,0 +1,111 @@
+<% var page = 'items'; var title = 'Item Detail'; %>
+<%- include('partials/head') %>
+
+<div class="page-header">
+  <h1><%= item.title %></h1>
+  <div class="flex-gap mt-2">
+    <span class="badge badge-<%= item.approvalStatus === 'approved' ? 'approved' : item.approvalStatus === 'rejected' ? 'rejected' : 'pending' %>">
+      <%= item.approvalStatus %>
+    </span>
+    <span class="text-sm text-muted">ID: <%= item.id %></span>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+  <!-- Item Info -->
+  <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:20px;">
+    <h3 style="margin-bottom:16px;">Item Details</h3>
+    <form method="POST" action="/admin/action/items/<%= item.id %>/edit">
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" name="title" value="<%= item.title %>">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" rows="3"><%= item.description %></textarea>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <input type="text" name="category" value="<%= item.category %>">
+      </div>
+      <div class="form-group">
+        <label>Price Per Day (₹)</label>
+        <input type="number" name="pricePerDay" value="<%= item.pricePerDay %>" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Security Deposit (₹)</label>
+        <input type="number" name="securityDeposit" value="<%= item.securityDeposit %>" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Quantity</label>
+        <input type="number" name="quantity" value="<%= item.quantity %>">
+      </div>
+      <div class="form-group">
+        <label>Condition</label>
+        <select name="condition">
+          <option value="new" <%= item.condition === 'new' ? 'selected' : '' %>>New</option>
+          <option value="like_new" <%= item.condition === 'like_new' ? 'selected' : '' %>>Like New</option>
+          <option value="good" <%= item.condition === 'good' ? 'selected' : '' %>>Good</option>
+          <option value="fair" <%= item.condition === 'fair' ? 'selected' : '' %>>Fair</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Approval Status</label>
+        <select name="approvalStatus">
+          <option value="pending_approval" <%= item.approvalStatus === 'pending_approval' ? 'selected' : '' %>>Pending</option>
+          <option value="approved" <%= item.approvalStatus === 'approved' ? 'selected' : '' %>>Approved</option>
+          <option value="rejected" <%= item.approvalStatus === 'rejected' ? 'selected' : '' %>>Rejected</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Available</label>
+        <select name="isAvailable">
+          <option value="true" <%= item.isAvailable ? 'selected' : '' %>>Yes</option>
+          <option value="false" <%= !item.isAvailable ? 'selected' : '' %>>No</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </form>
+  </div>
+
+  <!-- Images & Owner -->
+  <div>
+    <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:20px;margin-bottom:16px;">
+      <h3 style="margin-bottom:12px;">Images</h3>
+      <div class="doc-images">
+        <% if (item.images && item.images.length > 0) { %>
+          <% item.images.forEach(function(img) { %>
+            <img class="doc-preview" src="https://rentpe.store/uploads/images/items/<%= item.id %>/<%= img %>" alt="Item image" style="width:120px;height:90px;">
+          <% }); %>
+        <% } else { %>
+          <span class="text-muted">No images</span>
+        <% } %>
+      </div>
+    </div>
+
+    <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:20px;margin-bottom:16px;">
+      <h3 style="margin-bottom:12px;">Owner</h3>
+      <% if (item.owner) { %>
+        <p><strong><%= item.owner.name %></strong></p>
+        <p class="text-sm text-muted"><%= item.owner.email %></p>
+        <p class="text-sm text-muted"><%= item.owner.phone || '—' %></p>
+        <p class="text-sm text-muted">Role: <%= item.owner.role || 'user' %></p>
+      <% } else { %>
+        <span class="text-muted">Owner not found</span>
+      <% } %>
+    </div>
+
+    <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:20px;">
+      <h3 style="margin-bottom:12px;">Specs</h3>
+      <% if (item.specs && Object.keys(item.specs).length > 0) { %>
+        <% Object.entries(item.specs).forEach(function([key, val]) { %>
+          <p><span class="text-muted"><%= key %>:</span> <%= val %></p>
+        <% }); %>
+      <% } else { %>
+        <span class="text-muted">No specs</span>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

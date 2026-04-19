@@ -1,27 +1,42 @@
 try { require('dotenv').config(); } catch (e) { /* no .env file */ }
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 // Force bundler to include pg (Sequelize loads it dynamically)
 require('pg');
 
 const app = express();
 
+// EJS view engine
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
 // Middleware
 app.use(cors());
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Global rate limiter
+const { globalLimiter } = require('./middleware/rateLimiter');
+app.use('/api', globalLimiter);
+
+// Admin panel static assets
+app.use('/admin/public', express.static(path.join(__dirname, 'public')));
 
 // Health check — always responds, no dependencies
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
 
 // Lazy-load heavy modules only when needed (avoids cold-start crash)
 let dbReady = false;
-let sequelize, routes;
+let sequelize, routes, adminPanel;
 
 const loadRoutes = () => {
   if (routes) return routes;
   const { sequelize: sq } = require('./models');
   sequelize = sq;
+  adminPanel = require('./routes/adminPanel');
   routes = {
     auth: require('./routes/auth'),
     items: require('./routes/items'),
@@ -33,6 +48,7 @@ const loadRoutes = () => {
     subscription: require('./routes/subscription'),
     disputes: require('./routes/disputes'),
     favorites: require('./routes/favorites'),
+    admin: require('./routes/admin'),
   };
   return routes;
 };
@@ -42,9 +58,6 @@ const connectDB = async () => {
   try {
     loadRoutes();
     await sequelize.authenticate();
-    if (!process.env.VERCEL) {
-      await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
-    }
     dbReady = true;
     console.log('Connected to PostgreSQL');
   } catch (err) {
@@ -81,6 +94,8 @@ app.use(async (req, res, next) => {
       app.use('/api/subscription', r.subscription);
       app.use('/api/disputes', r.disputes);
       app.use('/api/favorites', r.favorites);
+      app.use('/api/admin', r.admin);
+      app.use('/admin', adminPanel);
       app._routesMounted = true;
     }
     next();
@@ -91,10 +106,36 @@ app.use(async (req, res, next) => {
 
 // Local development server (skip on Vercel)
 if (!process.env.VERCEL) {
+  const http = require('http');
+  const { Server } = require('socket.io');
+  const jwt = require('jsonwebtoken');
   const PORT = process.env.PORT || 3000;
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = http.createServer(app);
+  const io = new Server(server, { cors: { origin: '*' } });
+
+  io.use((socket, next) => {
+    const token = socket.handshake.auth.token;
+    if (!token) return next(new Error('Authentication required'));
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      socket.userId = decoded.userId;
+      next();
+    } catch (err) {
+      next(new Error('Invalid token'));
+    }
+  });
+
+  io.on('connection', (socket) => {
+    socket.join(socket.userId);
+    socket.on('disconnect', () => {});
+  });
+
+  app.set('io', io);
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
   });
+} else {
+  app.set('io', null);
 }
 
 module.exports = app;
